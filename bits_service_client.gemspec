@@ -18,8 +18,13 @@ Gem::Specification.new do |spec|
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.require_paths = ["lib"]
 
+  spec.add_dependency "steno"
+  spec.add_dependency "activesupport"
+
   spec.add_development_dependency "bundler", "~> 1.11"
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.0"
-  spec.add_development_dependency "webmock", "~> 1.2"
+  spec.add_development_dependency "webmock", '= 1.20.4'
+  spec.add_development_dependency "multipart-post"
+  spec.add_development_dependency "rack-test"
 end

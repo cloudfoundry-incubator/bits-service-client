@@ -1,12 +1,13 @@
 module BitsService
   class ResourcePool
-    def initialize(endpoint:)
+    def initialize(endpoint:, request_timeout_in_seconds:)
       @endpoint = URI.parse(endpoint)
+      @request_timeout_in_seconds = request_timeout_in_seconds
       @logger = Steno.logger('cc.bits_service.resource_pool')
     end
 
-    def matches(resources_json)
-      post('/app_stash/matches', resources_json).tap do |response|
+    def matches(resources_json, headers = {})
+      post('/app_stash/matches', resources_json, headers).tap do |response|
         validate_response_code!(200, response)
       end
     end
@@ -57,8 +58,8 @@ module BitsService
       raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}")
     end
 
-    def post(path, body, header={})
-      request = Net::HTTP::Post.new(path, header)
+    def post(path, body, headers={})
+      request = Net::HTTP::Post.new(path, headers)
 
       request.body = body
       do_request(http_client, request)
@@ -79,22 +80,18 @@ module BitsService
         path: request.path,
         address: http_client.address,
         port: http_client.port,
-        vcap_id: VCAP::Request.current_id,
+#        vcap_id: VCAP::Request.current_id,
         request_id: request_id
       })
-      request.add_field(VCAP::Request::HEADER_NAME, VCAP::Request.current_id)
+#      request.add_field(VCAP::Request::HEADER_NAME, VCAP::Request.current_id)
 
       http_client.request(request).tap do |response|
-        @logger.info('Response', { code: response.code, vcap_id: VCAP::Request.current_id, request_id: request_id })
+#        @logger.info('Response', { code: response.code, vcap_id: VCAP::Request.current_id, request_id: request_id })
       end
     end
 
     def http_client
-      @http_client ||= Net::HTTP.new(endpoint.host, endpoint.port).tap { |c| c.read_timeout = request_timeout }
-    end
-
-    def request_timeout
-      CloudController::DependencyLocator.instance.config[:request_timeout_in_seconds]
+      @http_client ||= Net::HTTP.new(endpoint.host, endpoint.port).tap { |c| c.read_timeout = @request_timeout_in_seconds }
     end
   end
 end

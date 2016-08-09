@@ -1,3 +1,5 @@
+require 'active_support/inflector'
+
 module BitsService
   class Client
     ResourceTypeNotPresent = Class.new(StandardError)
@@ -52,7 +54,7 @@ module BitsService
       validate_response_code!([204, 404], response)
 
       if response.code.to_i == 404
-        raise CloudController::Blobstore::FileNotFound.new("Could not find object '#{key}', #{response.code}/#{response.body}")
+        raise FileNotFound.new("Could not find object '#{key}', #{response.code}/#{response.body}")
       end
     end
 
@@ -112,7 +114,7 @@ module BitsService
 
       logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{error}")
 
-      fail CloudController::Blobstore::BlobstoreError.new(error)
+      fail BlobstoreError.new(error)
     end
 
     def resource_path(guid)
@@ -170,13 +172,13 @@ module BitsService
         path: request.path,
         address: http_client.address,
         port: http_client.port,
-        vcap_id: VCAP::Request.current_id,
+#        vcap_id: VCAP::Request.current_id,
         request_id: request_id
       })
 
-      request.add_field(VCAP::Request::HEADER_NAME, VCAP::Request.current_id)
+#      request.add_field(VCAP::Request::HEADER_NAME, VCAP::Request.current_id)
       http_client.request(request).tap do |response|
-        logger.info('Response', { code: response.code, vcap_id: VCAP::Request.current_id, request_id: request_id })
+#        logger.info('Response', { code: response.code, vcap_id: VCAP::Request.current_id, request_id: request_id })
       end
     end
 
