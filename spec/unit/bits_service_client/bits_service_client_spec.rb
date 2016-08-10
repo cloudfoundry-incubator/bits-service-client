@@ -6,6 +6,7 @@ RSpec.describe BitsService::Client do
   let(:key) { SecureRandom.uuid }
   let(:private_resource_endpoint) { File.join(options[:private_endpoint], resource_type.to_s, key) }
   let(:public_resource_endpoint) { File.join(options[:public_endpoint], resource_type.to_s, key) }
+  let(:vcap_request_id){'4711'}
 
   let(:file_path) do
     Tempfile.new('blob').tap do |file|
@@ -22,7 +23,7 @@ RSpec.describe BitsService::Client do
     }
   end
 
-  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type) }
+  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id) }
 
   describe '#local?' do
     it 'is not local' do
@@ -314,6 +315,50 @@ RSpec.describe BitsService::Client do
           }.to raise_error(BitsService::BlobstoreError)
         end
       end
+    end
+  end
+
+  describe 'forwards vcap-request-id' do
+    it 'includes the header with a POST request' do
+      request = stub_request(:put, private_resource_endpoint).
+                with(body: /name="#{resource_type.to_s.singularize}"/).
+                with(headers: { 'X_VCAP_REQUEST_ID' => vcap_request_id }).
+                to_return(status: 201)
+
+      subject.cp_to_blobstore(file_path, key)
+      expect(request).to have_been_requested
+    end
+  end
+
+  context 'Logging' do
+    it 'logs the request being made' do
+      allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
+
+      expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', {
+        method: 'PUT',
+        path: ['/' +  resource_type.to_s, key].join('/'),
+        address: 'bits-service.service.cf.internal',
+        port: 80,
+        vcap_request_id: vcap_request_id,
+      })
+
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201)
+
+      subject.cp_to_blobstore(file_path, key)
+      expect(request).to have_been_requested
+    end
+
+    it 'logs the response being received' do
+      allow_any_instance_of(Steno::Logger).to receive(:info).with('Request', anything)
+      expect_any_instance_of(Steno::Logger).to receive(:info).with('Response', {
+        code: '201',
+        vcap_request_id: vcap_request_id,
+      })
+
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201)
+
+      subject.cp_to_blobstore(file_path, key)
+      expect(request).to have_been_requested
     end
   end
 end
