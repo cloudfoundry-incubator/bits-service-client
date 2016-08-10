@@ -1,5 +1,4 @@
 require 'spec_helper'
-require_relative '../client_shared'
 
 RSpec.describe BitsService::Client do
   let(:resource_type) { [:buildpacks, :droplets, :packages].sample }

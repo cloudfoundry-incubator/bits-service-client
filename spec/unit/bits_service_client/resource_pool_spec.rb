@@ -10,29 +10,22 @@ module BitsService
 
     subject { ResourcePool.new(endpoint: endpoint, request_timeout_in_seconds: request_timeout_in_seconds) }
 
-    xdescribe 'forwards vcap-request-id' do
+    describe 'forwards vcap-request-id' do
       let(:file_path) { Tempfile.new('buildpack').path }
       let(:file_name) { 'my-buildpack.zip' }
 
       it 'includes the header with a POST request' do
-        expect(VCAP::Request).to receive(:current_id).at_least(:twice).and_return('0815')
-
         request = stub_request(:post, File.join(endpoint, 'app_stash/matches')).
                   with(headers: { 'X-Vcap-Request_Id' => '0815' }).
                   to_return(status: 200)
 
-        subject.matches([].to_json)
+        subject.matches([].to_json, '0815')
         expect(request).to have_been_requested
       end
     end
 
-    xcontext 'Logging' do
+    context 'Logging' do
       let!(:request) { stub_request(:post, File.join(endpoint, 'app_stash/matches')).to_return(status: 200) }
-      let(:vcap_id) { 'VCAP-ID-1' }
-
-      before do
-        allow(VCAP::Request).to receive(:current_id).and_return(vcap_id)
-      end
 
       it 'logs the request being made' do
         allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
@@ -42,11 +35,10 @@ module BitsService
           path: '/app_stash/matches',
           address: 'bits-service.service.cf.internal',
           port: 80,
-          vcap_id: vcap_id,
-          request_id: anything
+          vcap_request_id: '0815',
         })
 
-        subject.matches([].to_json)
+        subject.matches([].to_json, '0815')
       end
 
       it 'logs the response being received' do
@@ -54,25 +46,10 @@ module BitsService
 
         expect_any_instance_of(Steno::Logger).to receive(:info).with('Response', {
           code: '200',
-          vcap_id: vcap_id,
-          request_id: anything
+          vcap_request_id: '0815',
         })
 
-        subject.matches([].to_json)
-      end
-
-      it 'matches the request_id from the request in the reponse' do
-        request_id = nil
-
-        expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', anything) do |_, _, data|
-          request_id = data[:request_id]
-        end
-
-        expect_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything) do |_, _, data|
-          expect(data[:request_id]).to eq(request_id)
-        end
-
-        subject.matches([].to_json)
+        subject.matches([].to_json, '0815')
       end
     end
 

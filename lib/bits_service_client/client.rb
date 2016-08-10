@@ -71,22 +71,18 @@ module BitsService
     end
 
     def delete_all(_=nil)
-      if :buildpack_cache != resource_type
-        raise NotImplementedError
-      else
-        delete_request(resource_path('')).tap do |response|
-          validate_response_code!(204, response)
-        end
+      raise NotImplementedError unless :buildpack_cache == resource_type
+
+      delete_request(resource_path('')).tap do |response|
+        validate_response_code!(204, response)
       end
     end
 
     def delete_all_in_path(path)
-      if :buildpack_cache != resource_type
-        raise NotImplementedError
-      else
-        delete_request(resource_path(path.to_s)).tap do |response|
-          validate_response_code!(204, response)
-        end
+      raise NotImplementedError unless :buildpack_cache == resource_type
+
+      delete_request(resource_path(path.to_s)).tap do |response|
+        validate_response_code!(204, response)
       end
     end
 
