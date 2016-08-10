@@ -6,21 +6,21 @@ module BitsService
       @logger = Steno.logger('cc.bits_service.resource_pool')
     end
 
-    def matches(resources_json, headers = {})
-      post('/app_stash/matches', resources_json, headers).tap do |response|
+    def matches(resources_json, vcap_request_id = '')
+      post('/app_stash/matches', resources_json, vcap_request_id).tap do |response|
         validate_response_code!(200, response)
       end
     end
 
-    def upload_entries(entries_path)
+    def upload_entries(entries_path, vcap_request_id = '')
       with_file_attachment!(entries_path, 'entries.zip') do |file_attachment|
         body = { application: file_attachment }
-        multipart_post('/app_stash/entries', body)
+        multipart_post('/app_stash/entries', body, vcap_request_id)
       end
     end
 
-    def bundles(resources_json)
-      post('/app_stash/bundles', resources_json).tap do |response|
+    def bundles(resources_json, vcap_request_id = '')
+      post('/app_stash/bundles', resources_json, vcap_request_id).tap do |response|
         validate_response_code!(200, response)
       end
     end
@@ -58,35 +58,36 @@ module BitsService
       raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}")
     end
 
-    def post(path, body, headers={})
-      request = Net::HTTP::Post.new(path, headers)
+    def post(path, body, vcap_request_id)
+      request = Net::HTTP::Post.new(path)
 
       request.body = body
-      do_request(http_client, request)
+      do_request(http_client, request, vcap_request_id)
     end
 
-    def multipart_post(path, body, header={})
-      request = Net::HTTP::Post::Multipart.new(path, body, header)
-      do_request(http_client, request).tap do |response|
+    def multipart_post(path, body, vcap_request_id)
+      request = Net::HTTP::Post::Multipart.new(path, body)
+      do_request(http_client, request, vcap_request_id).tap do |response|
         validate_response_code!(201, response)
       end
     end
 
-    def do_request(http_client, request)
-      request_id = SecureRandom.uuid
-
+    def do_request(http_client, request, vcap_request_id)
       @logger.info('Request', {
         method: request.method,
         path: request.path,
         address: http_client.address,
         port: http_client.port,
-#        vcap_id: VCAP::Request.current_id,
-        request_id: request_id
+        vcap_request_id: vcap_request_id,
       })
-#      request.add_field(VCAP::Request::HEADER_NAME, VCAP::Request.current_id)
+
+      request.add_field('X_VCAP_REQUEST_ID', vcap_request_id)
 
       http_client.request(request).tap do |response|
-#        @logger.info('Response', { code: response.code, vcap_id: VCAP::Request.current_id, request_id: request_id })
+        @logger.info('Response', {
+          code: response.code,
+          vcap_request_id: vcap_request_id,
+        })
       end
     end
 
