@@ -4,12 +4,13 @@ module BitsService
   class Client
     ResourceTypeNotPresent = Class.new(StandardError)
 
-    def initialize(bits_service_options:, resource_type:)
+    def initialize(bits_service_options:, resource_type:, vcap_request_id: '')
       raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
 
       @resource_type = resource_type
       @resource_type_singular = @resource_type.to_s.singularize
       @options = bits_service_options
+      @vcap_request_id = vcap_request_id
     end
 
     def local?
@@ -161,20 +162,18 @@ module BitsService
     end
 
     def do_request(http_client, request)
-      request_id = SecureRandom.uuid
-
       logger.info('Request', {
         method: request.method,
         path: request.path,
         address: http_client.address,
         port: http_client.port,
-#        vcap_id: VCAP::Request.current_id,
-        request_id: request_id
+        vcap_request_id: @vcap_request_id,
       })
 
-#      request.add_field(VCAP::Request::HEADER_NAME, VCAP::Request.current_id)
+      request.add_field('X_VCAP_REQUEST_ID', @vcap_request_id)
+
       http_client.request(request).tap do |response|
-#        logger.info('Response', { code: response.code, vcap_id: VCAP::Request.current_id, request_id: request_id })
+        logger.info('Response', { code: response.code, vcap_request_id: @vcap_request_id })
       end
     end
 
