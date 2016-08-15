@@ -1,26 +1,27 @@
 module BitsService
   class ResourcePool
-    def initialize(endpoint:, request_timeout_in_seconds:)
+    def initialize(endpoint:, request_timeout_in_seconds:, vcap_request_id: '')
       @endpoint = URI.parse(endpoint)
       @request_timeout_in_seconds = request_timeout_in_seconds
+      @vcap_request_id = vcap_request_id
       @logger = Steno.logger('cc.bits_service.resource_pool')
     end
 
-    def matches(resources_json, vcap_request_id = '')
-      post('/app_stash/matches', resources_json, vcap_request_id).tap do |response|
+    def matches(resources_json)
+      post('/app_stash/matches', resources_json, @vcap_request_id).tap do |response|
         validate_response_code!(200, response)
       end
     end
 
-    def upload_entries(entries_path, vcap_request_id = '')
+    def upload_entries(entries_path)
       with_file_attachment!(entries_path, 'entries.zip') do |file_attachment|
         body = { application: file_attachment }
-        multipart_post('/app_stash/entries', body, vcap_request_id)
+        multipart_post('/app_stash/entries', body, @vcap_request_id)
       end
     end
 
-    def bundles(resources_json, vcap_request_id = '')
-      post('/app_stash/bundles', resources_json, vcap_request_id).tap do |response|
+    def bundles(resources_json)
+      post('/app_stash/bundles', resources_json, @vcap_request_id).tap do |response|
         validate_response_code!(200, response)
       end
     end

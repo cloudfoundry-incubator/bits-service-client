@@ -5,10 +5,15 @@ module BitsService
   RSpec.describe ResourcePool do
     let(:endpoint) { 'http://bits-service.service.cf.internal/' }
     let(:request_timeout_in_seconds) { 42 }
+    let(:vcap_request_id) {'4711'}
 
     let(:guid) { SecureRandom.uuid }
 
-    subject { ResourcePool.new(endpoint: endpoint, request_timeout_in_seconds: request_timeout_in_seconds) }
+    subject { ResourcePool.new(
+      endpoint: endpoint,
+      request_timeout_in_seconds: request_timeout_in_seconds,
+      vcap_request_id: vcap_request_id,
+    ) }
 
     describe 'forwards vcap-request-id' do
       let(:file_path) { Tempfile.new('buildpack').path }
@@ -16,10 +21,10 @@ module BitsService
 
       it 'includes the header with a POST request' do
         request = stub_request(:post, File.join(endpoint, 'app_stash/matches')).
-                  with(headers: { 'X-Vcap-Request_Id' => '0815' }).
+                  with(headers: { 'X-Vcap-Request_Id' => vcap_request_id }).
                   to_return(status: 200)
 
-        subject.matches([].to_json, '0815')
+        subject.matches([].to_json)
         expect(request).to have_been_requested
       end
     end
@@ -35,10 +40,10 @@ module BitsService
           path: '/app_stash/matches',
           address: 'bits-service.service.cf.internal',
           port: 80,
-          vcap_request_id: '0815',
+          vcap_request_id: vcap_request_id,
         })
 
-        subject.matches([].to_json, '0815')
+        subject.matches([].to_json)
       end
 
       it 'logs the response being received' do
@@ -46,10 +51,10 @@ module BitsService
 
         expect_any_instance_of(Steno::Logger).to receive(:info).with('Response', {
           code: '200',
-          vcap_request_id: '0815',
+          vcap_request_id: vcap_request_id,
         })
 
-        subject.matches([].to_json, '0815')
+        subject.matches([].to_json)
       end
     end
 
