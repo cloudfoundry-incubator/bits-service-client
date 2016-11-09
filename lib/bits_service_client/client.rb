@@ -3,13 +3,17 @@ require 'active_support/inflector'
 module BitsService
   class Client
     ResourceTypeNotPresent = Class.new(StandardError)
+    ConfigurationError = Class.new(StandardError)
 
     def initialize(bits_service_options:, resource_type:, vcap_request_id: '')
-      raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
+      @username = validated(bits_service_options, :username)
+      @password = validated(bits_service_options, :password)
+      @private_endpoint = validated_http_url(bits_service_options, :private_endpoint)
+      @public_endpoint = validated_http_url(bits_service_options, :public_endpoint)
 
+      raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
       @resource_type = resource_type
       @resource_type_singular = @resource_type.to_s.singularize
-      @options = bits_service_options
       @vcap_request_id = vcap_request_id
     end
 
@@ -18,7 +22,7 @@ module BitsService
     end
 
     def exists?(key)
-      response = head(private_http_client, resource_path(key))
+      response = do_request(private_http_client, Net::HTTP::Head.new(resource_path(key)))
       validate_response_code!([200, 302, 404], response)
 
       response.code.to_i != 404
@@ -36,7 +40,7 @@ module BitsService
     def download_from_blobstore(source_key, destination_path, mode: nil)
       FileUtils.mkdir_p(File.dirname(destination_path))
       File.open(destination_path, 'wb') do |file|
-        uri = URI(resolve_redirects(private_http_client, source_key))
+        uri = URI(generate_url(private_http_client, source_key))
         response = Net::HTTP.get_response(uri)
         validate_response_code!(200, response)
         file.write(response.body)
@@ -60,10 +64,20 @@ module BitsService
     end
 
     def blob(key)
+      req = Net::HTTP::Get.new('/sign' + resource_path(key))
+      req.basic_auth(@username, @password)
+
+      response = do_request(private_http_client, req)
+      validate_response_code!([200, 302], response)
+
+      response.tap do |response|
+        response.body = response['location'] if response.code.to_i == 302
+      end
+
       Blob.new(
         guid: key,
-        public_download_url: resolve_redirects(public_http_client, key),
-        internal_download_url: resolve_redirects(private_http_client, key)
+        public_download_url: response.body,
+        internal_download_url: generate_url(private_http_client, key)
       )
     end
 
@@ -89,11 +103,12 @@ module BitsService
 
     private
 
-    attr_reader :options, :resource_type, :resource_type_singular
+    attr_reader :resource_type, :resource_type_singular
 
-    def resolve_redirects(http_client, path)
-      path = resource_path(path)
-      head(http_client, path).tap do |response|
+    def generate_url(http_client, guid)
+      path = resource_path(guid)
+
+      do_request(http_client, Net::HTTP::Head.new(path)).tap do |response|
         return response['location'] if response.code.to_i == 302
       end
 
@@ -132,11 +147,6 @@ module BitsService
       return if File.exist?(file_path)
 
       raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}")
-    end
-
-    def head(http_client, path)
-      request = Net::HTTP::Head.new(path)
-      do_request(http_client, request)
     end
 
     def get(http_client, path)
@@ -178,27 +188,30 @@ module BitsService
     end
 
     def private_http_client
-      @private_http_client ||= Net::HTTP.new(private_endpoint.host, private_endpoint.port)
+      @private_http_client ||= Net::HTTP.new(@private_endpoint.host, @private_endpoint.port)
     end
 
     def public_http_client
-      @public_http_client ||= Net::HTTP.new(public_endpoint.host, public_endpoint.port)
-    end
-
-    def private_endpoint
-      @private_endpoint ||= URI.parse(options[:private_endpoint])
-    end
-
-    def public_endpoint
-      @public_endpoint ||= URI.parse(options[:public_endpoint])
+      @public_http_client ||= Net::HTTP.new(@public_endpoint.host, @public_endpoint.port)
     end
 
     def endpoint(http_client)
-      http_client == public_http_client ? public_endpoint : private_endpoint
+      http_client == public_http_client ? @public_endpoint : @private_endpoint
     end
 
     def logger
-      @logger ||= Steno.logger('cc.blobstore')
+      @logger ||= Steno.logger('cc.bits_service_client')
+    end
+
+    def validated_http_url(bits_service_options, attribute)
+      URI.parse(validated(bits_service_options, attribute)).tap do |uri|
+        raise ConfigurationError.new("Please provide valid http(s) #{attribute}") unless uri.scheme&.match /https?/
+      end
+    end
+
+    def validated(bits_service_options, attribute)
+      raise ConfigurationError.new("Please provide #{attribute}") unless bits_service_options[attribute]
+      bits_service_options[attribute]
     end
   end
 end

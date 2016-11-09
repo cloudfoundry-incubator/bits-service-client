@@ -19,11 +19,61 @@ RSpec.describe BitsService::Client do
     {
       enabled: true,
       private_endpoint: 'http://bits-service.service.cf.internal',
-      public_endpoint: 'http://bits-service.bosh-lite.com'
+      public_endpoint: 'http://bits-service.bosh-lite.com',
+      username: 'admin',
+      password: 'admin',
     }
   end
 
   subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id) }
+
+  describe 'username missing' do
+    before { options.delete(:username) }
+
+    it 'raises an error' do
+      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+    end
+  end
+
+  describe 'password missing' do
+    before { options.delete(:password) }
+
+    it 'raises an error' do
+      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+    end
+  end
+
+  shared_examples_for 'empty endpoint' do
+    it 'raises an error' do
+      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+    end
+  end
+
+  shared_examples_for 'invalid endpoint' do
+    it 'raises an error' do
+      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+    end
+  end
+
+  describe 'private endpoint is missing' do
+    before { options.delete(:private_endpoint) }
+    it_behaves_like 'empty endpoint'
+  end
+
+  describe 'private endpoint is not a valid http URL' do
+    before { options[:private_endpoint] = 'somescheme:invalid_url' }
+    it_behaves_like 'invalid endpoint'
+  end
+
+  describe 'public endpoint is missing' do
+    before { options.delete(:public_endpoint) }
+    it_behaves_like 'empty endpoint'
+  end
+
+  describe 'public endpoint is not a valid http URL' do
+    before { options[:public_endpoint] = 'somescheme:invalid_url' }
+    it_behaves_like 'invalid endpoint'
+  end
 
   describe '#local?' do
     it 'is not local' do
@@ -201,6 +251,9 @@ RSpec.describe BitsService::Client do
     before do
       private_endpoint_request
       public_endpoint_request
+
+      stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").
+           to_return(:status => 200, :body => "http://bits-service.bosh-lite.com/#{resource_type}/#{key}")
     end
 
     it 'returns a blob object with the given guid' do
@@ -215,19 +268,14 @@ RSpec.describe BitsService::Client do
       expect(blob.internal_download_url).to eq(private_resource_endpoint)
     end
 
-    context 'when the download urls result in a redirect' do
-      let(:private_endpoint_request) do
+    context 'when the download url\'s result is a redirect' do
+      it 'uses redirected url as the internal_download_url' do
         stub_request(:head, private_resource_endpoint).to_return(status: 302, headers: { location: 'some-redirect-1' })
-      end
-      let(:public_endpoint_request) do
-        stub_request(:head, public_resource_endpoint).to_return(status: 302, headers: { location: 'some-redirect-2' })
-      end
-
-      it 'maps the redirected url as the internal_download_url' do
         expect(blob.internal_download_url).to eq('some-redirect-1')
       end
 
-      it 'maps the redirected url as public_download_url' do
+      it 'used the redirected url as public_download_url' do
+        stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").to_return(status: 302, headers: { location: 'some-redirect-2' })
         expect(blob.public_download_url).to eq('some-redirect-2')
       end
     end
@@ -237,6 +285,9 @@ RSpec.describe BitsService::Client do
     before do
       stub_request(:head, private_resource_endpoint).to_return(status: 200)
       stub_request(:head, public_resource_endpoint).to_return(status: 200)
+
+      stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").
+           to_return(:status => 200)
     end
 
     it 'sends the right request to the bits-service' do
