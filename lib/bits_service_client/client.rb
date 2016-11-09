@@ -1,4 +1,5 @@
 require 'active_support/inflector'
+require 'bits_service_client/logging_http_client'
 
 module BitsService
   class Client
@@ -13,8 +14,10 @@ module BitsService
 
       raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
       @resource_type = resource_type
-      @resource_type_singular = @resource_type.to_s.singularize
       @vcap_request_id = vcap_request_id
+
+      @private_http_client = LoggingHttpClient.new(Net::HTTP.new(@private_endpoint.host, @private_endpoint.port))
+      @public_http_client = LoggingHttpClient.new(Net::HTTP.new(@public_endpoint.host, @public_endpoint.port))
     end
 
     def local?
@@ -22,7 +25,7 @@ module BitsService
     end
 
     def exists?(key)
-      response = do_request(private_http_client, Net::HTTP::Head.new(resource_path(key)))
+      response = @private_http_client.head(resource_path(key), @vcap_request_id)
       validate_response_code!([200, 302, 404], response)
 
       response.code.to_i != 404
@@ -31,8 +34,8 @@ module BitsService
     def cp_to_blobstore(source_path, destination_key)
       filename = File.basename(source_path)
       with_file_attachment!(source_path, filename) do |file_attachment|
-        body = { :"#{resource_type_singular}" => file_attachment }
-        response = put(resource_path(destination_key), body)
+        body = { :"#{@resource_type.to_s.singularize}" => file_attachment }
+        response = @private_http_client.do_request(Net::HTTP::Put::Multipart.new(resource_path(destination_key), body), @vcap_request_id)
         validate_response_code!(201, response)
       end
     end
@@ -40,7 +43,7 @@ module BitsService
     def download_from_blobstore(source_key, destination_path, mode: nil)
       FileUtils.mkdir_p(File.dirname(destination_path))
       File.open(destination_path, 'wb') do |file|
-        uri = URI(generate_url(private_http_client, source_key))
+        uri = URI(generate_url(@private_http_client, source_key))
         response = Net::HTTP.get_response(uri)
         validate_response_code!(200, response)
         file.write(response.body)
@@ -55,7 +58,7 @@ module BitsService
     end
 
     def delete(key)
-      response = delete_request(resource_path(key))
+      response = @private_http_client.delete(resource_path(key), @vcap_request_id)
       validate_response_code!([204, 404], response)
 
       if response.code.to_i == 404
@@ -64,10 +67,7 @@ module BitsService
     end
 
     def blob(key)
-      req = Net::HTTP::Get.new('/sign' + resource_path(key))
-      req.basic_auth(@username, @password)
-
-      response = do_request(private_http_client, req)
+      response = @private_http_client.get('/sign' + resource_path(key), @vcap_request_id, @username, @password)
       validate_response_code!([200, 302], response)
 
       response.tap do |response|
@@ -77,7 +77,7 @@ module BitsService
       Blob.new(
         guid: key,
         public_download_url: response.body,
-        internal_download_url: generate_url(private_http_client, key)
+        internal_download_url: generate_url(@private_http_client, key)
       )
     end
 
@@ -88,7 +88,7 @@ module BitsService
     def delete_all(_=nil)
       raise NotImplementedError unless :buildpack_cache == resource_type
 
-      delete_request(resource_path('')).tap do |response|
+      @private_http_client.delete(resource_path(''), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
     end
@@ -96,19 +96,19 @@ module BitsService
     def delete_all_in_path(path)
       raise NotImplementedError unless :buildpack_cache == resource_type
 
-      delete_request(resource_path(path.to_s)).tap do |response|
+      @private_http_client.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
     end
 
     private
 
-    attr_reader :resource_type, :resource_type_singular
+    attr_reader :resource_type
 
     def generate_url(http_client, guid)
       path = resource_path(guid)
 
-      do_request(http_client, Net::HTTP::Head.new(path)).tap do |response|
+      http_client.head(path, @vcap_request_id).tap do |response|
         return response['location'] if response.code.to_i == 302
       end
 
@@ -149,54 +149,8 @@ module BitsService
       raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}")
     end
 
-    def get(http_client, path)
-      request = Net::HTTP::Get.new(path)
-      do_request(http_client, request)
-    end
-
-    def post(path, body, header={})
-      request = Net::HTTP::Post.new(path, header)
-
-      request.body = body
-      do_request(private_http_client, request)
-    end
-
-    def put(path, body, header={})
-      request = Net::HTTP::Put::Multipart.new(path, body, header)
-      do_request(private_http_client, request)
-    end
-
-    def delete_request(path)
-      request = Net::HTTP::Delete.new(path)
-      do_request(private_http_client, request)
-    end
-
-    def do_request(http_client, request)
-      logger.info('Request', {
-        method: request.method,
-        path: request.path,
-        address: http_client.address,
-        port: http_client.port,
-        vcap_request_id: @vcap_request_id,
-      })
-
-      request.add_field('X_VCAP_REQUEST_ID', @vcap_request_id)
-
-      http_client.request(request).tap do |response|
-        logger.info('Response', { code: response.code, vcap_request_id: @vcap_request_id })
-      end
-    end
-
-    def private_http_client
-      @private_http_client ||= Net::HTTP.new(@private_endpoint.host, @private_endpoint.port)
-    end
-
-    def public_http_client
-      @public_http_client ||= Net::HTTP.new(@public_endpoint.host, @public_endpoint.port)
-    end
-
     def endpoint(http_client)
-      http_client == public_http_client ? @public_endpoint : @private_endpoint
+      http_client == @public_http_client ? @public_endpoint : @private_endpoint
     end
 
     def logger
