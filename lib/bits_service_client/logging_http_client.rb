@@ -5,9 +5,11 @@ module BitsService
       @logger = Steno.logger('cc.bits_service.resource_pool')
     end
 
-    def get(path, vcap_request_id, username, password)
+    def get(path, vcap_request_id, credentials=nil)
       req = Net::HTTP::Get.new(path)
-      req.basic_auth(username, password)
+      if credentials
+        req.basic_auth(credentials[:username], credentials[:password])
+      end
       do_request(req, vcap_request_id)
     end
 

@@ -43,7 +43,7 @@ module BitsService
     def download_from_blobstore(source_key, destination_path, mode: nil)
       FileUtils.mkdir_p(File.dirname(destination_path))
       File.open(destination_path, 'wb') do |file|
-        uri = URI(generate_url(@private_http_client, source_key))
+        uri = URI(generate_private_url(source_key))
         response = Net::HTTP.get_response(uri)
         validate_response_code!(200, response)
         file.write(response.body)
@@ -67,7 +67,7 @@ module BitsService
     end
 
     def blob(key)
-      response = @private_http_client.get('/sign' + resource_path(key), @vcap_request_id, @username, @password)
+      response = @private_http_client.get('/sign' + resource_path(key), @vcap_request_id, {username: @username, password: @password})
       validate_response_code!([200, 302], response)
 
       response.tap do |response|
@@ -77,7 +77,7 @@ module BitsService
       Blob.new(
         guid: key,
         public_download_url: response.body,
-        internal_download_url: generate_url(@private_http_client, key)
+        internal_download_url: generate_private_url(key)
       )
     end
 
@@ -105,14 +105,14 @@ module BitsService
 
     attr_reader :resource_type
 
-    def generate_url(http_client, guid)
+    def generate_private_url(guid)
       path = resource_path(guid)
 
-      http_client.head(path, @vcap_request_id).tap do |response|
+      @private_http_client.head(path, @vcap_request_id).tap do |response|
         return response['location'] if response.code.to_i == 302
       end
 
-      File.join(endpoint(http_client).to_s, path)
+      File.join(@private_endpoint.to_s, path)
     end
 
     def validate_response_code!(expected_codes, response)
@@ -135,18 +135,12 @@ module BitsService
     end
 
     def with_file_attachment!(file_path, filename, &block)
-      validate_file! file_path
+      raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}") unless File.exist?(file_path)
 
       File.open(file_path) do |file|
         attached_file = UploadIO.new(file, 'application/octet-stream', filename)
         yield attached_file
       end
-    end
-
-    def validate_file!(file_path)
-      return if File.exist?(file_path)
-
-      raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}")
     end
 
     def endpoint(http_client)
