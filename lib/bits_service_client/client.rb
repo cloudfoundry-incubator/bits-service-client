@@ -43,8 +43,7 @@ module BitsService
     def download_from_blobstore(source_key, destination_path, mode: nil)
       FileUtils.mkdir_p(File.dirname(destination_path))
       File.open(destination_path, 'wb') do |file|
-        uri = URI(generate_private_url(source_key))
-        response = Net::HTTP.get_response(uri)
+        response = @private_http_client.get(resource_path(source_key), @vcap_request_id)
         validate_response_code!(200, response)
         file.write(response.body)
         file.chmod(mode) if mode

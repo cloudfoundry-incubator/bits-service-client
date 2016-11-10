@@ -142,34 +142,10 @@ RSpec.describe BitsService::Client do
         to_return(status: 200, body: File.new(file_path))
     end
 
-    it 'makes the correct request to the bits-service' do
-      request = stub_request(:get, private_resource_endpoint).
-                to_return(status: 200, body: File.new(file_path))
-
-      subject.download_from_blobstore(key, destination_path)
-      expect(request).to have_been_requested
-    end
-
     it 'downloads the blob to the destination path' do
       expect {
         subject.download_from_blobstore(key, destination_path)
       }.to change { File.exist?(destination_path) }.from(false).to(true)
-    end
-
-    context 'when there is a redirect' do
-      let(:redirected_location) { 'http://some.where/else' }
-      before do
-        stub_request(:head, private_resource_endpoint).
-          to_return(status: 302, headers: { location: redirected_location })
-      end
-
-      it 'follows the redirect' do
-        request = stub_request(:get, redirected_location).
-                  to_return(status: 200, body: File.new(file_path))
-
-        subject.download_from_blobstore(key, destination_path)
-        expect(request).to have_been_requested
-      end
     end
 
     context 'when mode is defined' do
