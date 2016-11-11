@@ -4,7 +4,7 @@ module BitsService
       @endpoint = URI.parse(endpoint)
       @request_timeout_in_seconds = request_timeout_in_seconds
       @vcap_request_id = vcap_request_id
-      @logger = Steno.logger('cc.bits_service.resource_pool')
+      @logger = Steno.logger('cc.bits_service_client')
     end
 
     def matches(resources_json)

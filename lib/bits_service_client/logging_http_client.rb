@@ -2,7 +2,7 @@ module BitsService
   class LoggingHttpClient
     def initialize(http_client)
       @http_client = http_client
-      @logger = Steno.logger('cc.bits_service.resource_pool')
+      @logger = Steno.logger('cc.bits_service_client')
     end
 
     def get(path, vcap_request_id, credentials=nil)
