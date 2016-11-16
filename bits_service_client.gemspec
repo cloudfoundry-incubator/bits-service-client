@@ -6,14 +6,11 @@ require 'bits_service_client/version'
 Gem::Specification.new do |spec|
   spec.name          = "bits_service_client"
   spec.version       = BitsServiceClient::VERSION
-  spec.authors       = ["Rizwan Reza"]
-  spec.email         = ["rizwanreza@gmail.com"]
+  spec.authors       = ['Rizwan Reza', 'Steffen Uhlig', 'Peter Goetz']
+  spec.email         = ["rizwanreza@gmail.com", 'steffen.uhlig@de.ibm.com', 'peter.gtz@gmail.com']
 
   spec.summary       = %q{Bits Services client for Cloud Foundry}
   spec.homepage      = "http://github.com/cloudfoundry/bits_service_client"
-
-  # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or
-  # delete this section to allow pushing this gem to any host.
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.require_paths = ["lib"]
@@ -32,5 +29,4 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "guard-rspec"
   spec.add_development_dependency 'terminal-notifier-guard'
   spec.add_development_dependency 'terminal-notifier'
-
 end
