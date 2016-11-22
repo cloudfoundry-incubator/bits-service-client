@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["rizwanreza@gmail.com", 'steffen.uhlig@de.ibm.com', 'peter.gtz@gmail.com']
 
   spec.summary       = %q{Bits Services client for Cloud Foundry}
-  spec.homepage      = "http://github.com/cloudfoundry/bits_service_client"
+  spec.homepage      = "https://github.com/cloudfoundry-incubator/bits-service-client"
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.require_paths = ["lib"]
@@ -29,4 +29,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "guard-rspec"
   spec.add_development_dependency 'terminal-notifier-guard'
   spec.add_development_dependency 'terminal-notifier'
+  spec.add_development_dependency 'rb-readline'
 end
