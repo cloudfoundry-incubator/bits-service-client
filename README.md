@@ -4,6 +4,9 @@ Ruby client for [bits-service](https://github.com/cloudfoundry-incubator/bits-se
 
 # Changelog
 
+* 0.2.1:
+  - Update list of authors
+
 * 0.2.0:
   - Add `vcap_request_id` to `BitsService::Client` and `BitsService::ResourcePool`
   - Add `request_timeout_in_seconds` to `BitsService::ResourcePool`
