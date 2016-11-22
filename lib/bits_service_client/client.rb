@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require 'active_support/inflector'
 require 'bits_service_client/logging_http_client'
 
@@ -66,11 +67,11 @@ module BitsService
     end
 
     def blob(key)
-      response = @private_http_client.get('/sign' + resource_path(key), @vcap_request_id, {username: @username, password: @password})
+      response = @private_http_client.get('/sign' + resource_path(key), @vcap_request_id, { username: @username, password: @password })
       validate_response_code!([200, 302], response)
 
-      response.tap do |response|
-        response.body = response['location'] if response.code.to_i == 302
+      response.tap do |result|
+        result.body = result['location'] if result.code.to_i == 302
       end
 
       Blob.new(

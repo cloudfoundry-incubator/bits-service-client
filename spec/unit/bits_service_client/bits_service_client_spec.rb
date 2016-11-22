@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require 'spec_helper'
 
 RSpec.describe BitsService::Client do
@@ -6,7 +7,7 @@ RSpec.describe BitsService::Client do
   let(:key) { SecureRandom.uuid }
   let(:private_resource_endpoint) { File.join(options[:private_endpoint], resource_type.to_s, key) }
   let(:public_resource_endpoint) { File.join(options[:public_endpoint], resource_type.to_s, key) }
-  let(:vcap_request_id){'4711'}
+  let(:vcap_request_id) { '4711' }
 
   let(:file_path) do
     Tempfile.new('blob').tap do |file|
@@ -31,7 +32,7 @@ RSpec.describe BitsService::Client do
     before { options.delete(:username) }
 
     it 'raises an error' do
-      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+      expect { subject }.to raise_error BitsService::Client::ConfigurationError
     end
   end
 
@@ -39,19 +40,19 @@ RSpec.describe BitsService::Client do
     before { options.delete(:password) }
 
     it 'raises an error' do
-      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+      expect { subject }.to raise_error BitsService::Client::ConfigurationError
     end
   end
 
   shared_examples_for 'empty endpoint' do
     it 'raises an error' do
-      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+      expect { subject }.to raise_error BitsService::Client::ConfigurationError
     end
   end
 
   shared_examples_for 'invalid endpoint' do
     it 'raises an error' do
-      expect{subject}.to raise_error BitsService::Client::ConfigurationError
+      expect { subject }.to raise_error BitsService::Client::ConfigurationError
     end
   end
 
@@ -150,7 +151,7 @@ RSpec.describe BitsService::Client do
 
     context 'when mode is defined' do
       it 'sets the file to the given mode' do
-        subject.download_from_blobstore(key, destination_path, mode: 0753)
+        subject.download_from_blobstore(key, destination_path, mode: 0o753)
         expect(sprintf('%o', File.stat(destination_path).mode)).to eq('100753')
       end
     end
@@ -229,7 +230,7 @@ RSpec.describe BitsService::Client do
       public_endpoint_request
 
       stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").
-           to_return(:status => 200, :body => "http://bits-service.bosh-lite.com/#{resource_type}/#{key}")
+        to_return(status: 200, body: "http://bits-service.bosh-lite.com/#{resource_type}/#{key}")
     end
 
     it 'returns a blob object with the given guid' do
@@ -263,7 +264,7 @@ RSpec.describe BitsService::Client do
       stub_request(:head, public_resource_endpoint).to_return(status: 200)
 
       stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").
-           to_return(:status => 200)
+        to_return(status: 200)
     end
 
     it 'sends the right request to the bits-service' do
@@ -363,7 +364,7 @@ RSpec.describe BitsService::Client do
 
       expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', {
         method: 'PUT',
-        path: ['/' +  resource_type.to_s, key].join('/'),
+        path: ['/' + resource_type.to_s, key].join('/'),
         address: 'bits-service.service.cf.internal',
         port: 80,
         vcap_request_id: vcap_request_id,

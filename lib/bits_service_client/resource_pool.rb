@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module BitsService
   class ResourcePool
     def initialize(endpoint:, request_timeout_in_seconds:, vcap_request_id: '')

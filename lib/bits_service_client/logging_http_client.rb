@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module BitsService
   class LoggingHttpClient
     def initialize(http_client)
@@ -40,6 +41,5 @@ module BitsService
         @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
       end
     end
-
   end
 end

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require 'spec_helper'
 require 'securerandom'
 
@@ -5,7 +6,7 @@ module BitsService
   RSpec.describe ResourcePool do
     let(:endpoint) { 'http://bits-service.service.cf.internal/' }
     let(:request_timeout_in_seconds) { 42 }
-    let(:vcap_request_id) {'4711'}
+    let(:vcap_request_id) { '4711' }
 
     let(:guid) { SecureRandom.uuid }
 
@@ -13,7 +14,8 @@ module BitsService
       endpoint: endpoint,
       request_timeout_in_seconds: request_timeout_in_seconds,
       vcap_request_id: vcap_request_id,
-    ) }
+    )
+    }
 
     describe 'forwards vcap-request-id' do
       let(:file_path) { Tempfile.new('buildpack').path }
