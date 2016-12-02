@@ -19,8 +19,8 @@ RSpec.describe BitsService::Client do
   let(:options) do
     {
       enabled: true,
-      private_endpoint: 'http://bits-service.service.cf.internal',
-      public_endpoint: 'http://bits-service.bosh-lite.com',
+      private_endpoint: 'http://private-host',
+      public_endpoint: 'http://public-host',
       username: 'admin',
       password: 'admin',
     }
@@ -85,7 +85,7 @@ RSpec.describe BitsService::Client do
   describe '#exists?' do
     context 'when the resource exists' do
       before do
-        stub_request(:head, "http://bits-service.service.cf.internal/#{resource_type}/#{key}").to_return(status: 200)
+        stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 200)
       end
 
       it 'returns true' do
@@ -95,7 +95,7 @@ RSpec.describe BitsService::Client do
 
     context 'when the resource does not exist' do
       before do
-        stub_request(:head, "http://bits-service.service.cf.internal/#{resource_type}/#{key}").to_return(status: 404)
+        stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 404)
       end
 
       it 'returns false' do
@@ -105,7 +105,7 @@ RSpec.describe BitsService::Client do
 
     context 'when the response code is invalid' do
       before do
-        stub_request(:head, "http://bits-service.service.cf.internal/#{resource_type}/#{key}").to_return(status: 500)
+        stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 500)
       end
 
       it 'raises a BlobstoreError' do
@@ -217,43 +217,33 @@ RSpec.describe BitsService::Client do
   end
 
   describe '#blob' do
-    let(:private_endpoint_request) do
-      stub_request(:head, private_resource_endpoint).to_return(status: 200)
-    end
-    let(:public_endpoint_request) do
-      stub_request(:head, public_resource_endpoint).to_return(status: 200)
-    end
-    let(:blob) { subject.blob(key) }
-
     before do
-      private_endpoint_request
-      public_endpoint_request
-
-      stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").
-        to_return(status: 200, body: "http://bits-service.bosh-lite.com/#{resource_type}/#{key}")
+      stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 200)
+      stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").
+        to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?signature=x")
     end
 
     it 'returns a blob object with the given guid' do
-      expect(blob.guid).to eq(key)
+      expect(subject.blob(key).guid).to eq(key)
     end
 
     it 'returns a blob object with public download_url' do
-      expect(blob.public_download_url).to eq(public_resource_endpoint)
+      expect(subject.blob(key).public_download_url).to eq("http://public-host/#{resource_type}/#{key}?signature=x")
     end
 
     it 'returns a blob object with internal download_url' do
-      expect(blob.internal_download_url).to eq(private_resource_endpoint)
+      expect(subject.blob(key).internal_download_url).to eq("http://private-host/#{resource_type}/#{key}")
     end
 
-    context 'when the download url\'s result is a redirect' do
+    context "when the download url's result is a redirect" do
       it 'uses redirected url as the internal_download_url' do
-        stub_request(:head, private_resource_endpoint).to_return(status: 302, headers: { location: 'some-redirect-1' })
-        expect(blob.internal_download_url).to eq('some-redirect-1')
+        stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 302, headers: { location: 'some-redirect-1' })
+        expect(subject.blob(key).internal_download_url).to eq('some-redirect-1')
       end
 
       it 'used the redirected url as public_download_url' do
-        stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").to_return(status: 302, headers: { location: 'some-redirect-2' })
-        expect(blob.public_download_url).to eq('some-redirect-2')
+        stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").to_return(status: 302, headers: { location: 'some-redirect-2' })
+        expect(subject.blob(key).public_download_url).to eq('some-redirect-2')
       end
     end
   end
@@ -263,7 +253,7 @@ RSpec.describe BitsService::Client do
       stub_request(:head, private_resource_endpoint).to_return(status: 200)
       stub_request(:head, public_resource_endpoint).to_return(status: 200)
 
-      stub_request(:get, "http://admin:admin@bits-service.service.cf.internal/sign/#{resource_type}/#{key}").
+      stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").
         to_return(status: 200)
     end
 
@@ -365,7 +355,7 @@ RSpec.describe BitsService::Client do
       expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', {
         method: 'PUT',
         path: ['/' + resource_type.to_s, key].join('/'),
-        address: 'bits-service.service.cf.internal',
+        address: 'private-host',
         port: 80,
         vcap_request_id: vcap_request_id,
       })
