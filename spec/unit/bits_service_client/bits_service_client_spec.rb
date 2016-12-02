@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 require 'spec_helper'
+require 'ostruct'
 
 RSpec.describe BitsService::Client do
   let(:resource_type) { [:buildpacks, :droplets, :packages].sample }
@@ -221,6 +222,8 @@ RSpec.describe BitsService::Client do
       stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 200)
       stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").
         to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?signature=x")
+      stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}?verb=put").
+        to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?verb=put&signature=y")
     end
 
     it 'returns a blob object with the given guid' do
@@ -229,6 +232,10 @@ RSpec.describe BitsService::Client do
 
     it 'returns a blob object with public download_url' do
       expect(subject.blob(key).public_download_url).to eq("http://public-host/#{resource_type}/#{key}?signature=x")
+    end
+
+    it 'returns a blob object with public upload_url' do
+      expect(subject.blob(key).public_upload_url).to eq("http://public-host/#{resource_type}/#{key}?verb=put&signature=y")
     end
 
     it 'returns a blob object with internal download_url' do
@@ -252,17 +259,13 @@ RSpec.describe BitsService::Client do
     before do
       stub_request(:head, private_resource_endpoint).to_return(status: 200)
       stub_request(:head, public_resource_endpoint).to_return(status: 200)
-
       stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").
         to_return(status: 200)
     end
 
     it 'sends the right request to the bits-service' do
       request = stub_request(:delete, private_resource_endpoint).to_return(status: 204)
-
-      blob = subject.blob(key)
-      subject.delete_blob(blob)
-
+      subject.delete_blob(OpenStruct.new(guid: key))
       expect(request).to have_been_requested
     end
 
@@ -271,8 +274,7 @@ RSpec.describe BitsService::Client do
         stub_request(:delete, private_resource_endpoint).to_return(status: 500)
 
         expect {
-          blob = subject.blob(key)
-          subject.delete_blob(blob)
+          subject.delete_blob(OpenStruct.new(guid: key))
         }.to raise_error(BitsService::BlobstoreError)
       end
     end

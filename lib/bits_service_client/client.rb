@@ -67,18 +67,29 @@ module BitsService
     end
 
     def blob(key)
-      response = @private_http_client.get('/sign' + resource_path(key), @vcap_request_id, { username: @username, password: @password })
+      Blob.new(
+        guid: key,
+        public_download_url: signed_url(key),
+        public_upload_url: signed_url(key, verb: 'put'),
+        internal_download_url: generate_private_url(key)
+      )
+    end
+
+    def signed_url(key, verb: nil)
+      query = if verb.nil?
+                ''
+              else
+                "?verb=#{verb}"
+              end
+
+      response = @private_http_client.get("/sign#{resource_path(key)}#{query}", @vcap_request_id, { username: @username, password: @password })
       validate_response_code!([200, 302], response)
 
       response.tap do |result|
         result.body = result['location'] if result.code.to_i == 302
       end
 
-      Blob.new(
-        guid: key,
-        public_download_url: response.body,
-        internal_download_url: generate_private_url(key)
-      )
+      response.body
     end
 
     def delete_blob(blob)
