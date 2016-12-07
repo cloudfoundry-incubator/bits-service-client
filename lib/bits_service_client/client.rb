@@ -45,6 +45,11 @@ module BitsService
       FileUtils.mkdir_p(File.dirname(destination_path))
       File.open(destination_path, 'wb') do |file|
         response = @private_http_client.get(resource_path(source_key), @vcap_request_id)
+
+        if response.code == '302'
+          response = Net::HTTP.get_response(URI(response['location']))
+        end
+
         validate_response_code!(200, response)
         file.write(response.body)
         file.chmod(mode) if mode

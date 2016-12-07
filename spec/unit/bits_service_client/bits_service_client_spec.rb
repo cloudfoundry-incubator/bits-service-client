@@ -173,8 +173,6 @@ RSpec.describe BitsService::Client do
     let(:destination_key) { SecureRandom.uuid }
 
     it 'downloads the blob before uploading it again with the new key' do
-      stub_request(:head, private_resource_endpoint).to_return(status: 200)
-
       download_request = stub_request(:get, private_resource_endpoint).
                          to_return(status: 200, body: File.new(file_path))
       upload_request = stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
@@ -184,6 +182,18 @@ RSpec.describe BitsService::Client do
       subject.cp_file_between_keys(key, destination_key)
       expect(download_request).to have_been_requested
       expect(upload_request).to have_been_requested
+    end
+
+    it 'follows a redirect before attempting to download the blob' do
+      stub_request(:get, private_resource_endpoint).
+        to_return(status: 302, headers: { location: 'http://somewhere.example.com' })
+      stub_request(:get, 'http://somewhere.example.com').
+        to_return(status: 200, body: File.new(file_path))
+      stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
+        with(body: /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/).
+        to_return(status: 201)
+
+      subject.cp_file_between_keys(key, destination_key)
     end
   end
 
