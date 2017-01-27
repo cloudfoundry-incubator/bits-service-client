@@ -7,7 +7,7 @@ module BitsService
     ResourceTypeNotPresent = Class.new(StandardError)
     ConfigurationError = Class.new(StandardError)
 
-    def initialize(bits_service_options:, resource_type:, vcap_request_id: '')
+    def initialize(bits_service_options:, resource_type:, vcap_request_id: '', request_timeout_in_seconds: 900)
       @username = validated(bits_service_options, :username)
       @password = validated(bits_service_options, :password)
       @private_endpoint = validated_http_url(bits_service_options, :private_endpoint)
@@ -17,8 +17,10 @@ module BitsService
       @resource_type = resource_type
       @vcap_request_id = vcap_request_id
 
-      @private_http_client = LoggingHttpClient.new(Net::HTTP.new(@private_endpoint.host, @private_endpoint.port).tap { |c| c.read_timeout = 900 } )
-      @public_http_client = LoggingHttpClient.new(Net::HTTP.new(@public_endpoint.host, @public_endpoint.port).tap { |c| c.read_timeout = 900 })
+      @private_http_client = LoggingHttpClient.new(
+        Net::HTTP.new(@private_endpoint.host, @private_endpoint.port).tap { |c| c.read_timeout = request_timeout_in_seconds })
+      @public_http_client = LoggingHttpClient.new(
+        Net::HTTP.new(@public_endpoint.host, @public_endpoint.port).tap { |c| c.read_timeout = request_timeout_in_seconds })
     end
 
     def local?
