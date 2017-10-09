@@ -20,12 +20,14 @@ module BitsService
         Net::HTTP.new(@private_endpoint.host, @private_endpoint.port).tap do |c|
           c.read_timeout = request_timeout_in_seconds
           c.use_ssl = true if @private_endpoint.scheme.start_with?('https')
+          c.verify_mode = OpenSSL::SSL::VERIFY_PEER if @private_endpoint.scheme.start_with?('https')
         end
         )
       @public_http_client = LoggingHttpClient.new(
         Net::HTTP.new(@public_endpoint.host, @public_endpoint.port).tap do |c|
           c.read_timeout = request_timeout_in_seconds
-          c.use_ssl = true if @private_endpoint.scheme.start_with?('https')
+          c.use_ssl = true if @public_endpoint.scheme.start_with?('https')
+          c.verify_mode = OpenSSL::SSL::VERIFY_PEER if @public_endpoint.scheme.start_with?('https')
         end
        )
     end
