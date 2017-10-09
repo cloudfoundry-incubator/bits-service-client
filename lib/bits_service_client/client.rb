@@ -16,11 +16,18 @@ module BitsService
       raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
       @resource_type = resource_type
       @vcap_request_id = vcap_request_id
-
       @private_http_client = LoggingHttpClient.new(
-        Net::HTTP.new(@private_endpoint.host, @private_endpoint.port).tap { |c| c.read_timeout = request_timeout_in_seconds })
+        Net::HTTP.new(@private_endpoint.host, @private_endpoint.port).tap do |c|
+          c.read_timeout = request_timeout_in_seconds
+          c.use_ssl = true if @private_endpoint.scheme.start_with?('https')
+        end
+        )
       @public_http_client = LoggingHttpClient.new(
-        Net::HTTP.new(@public_endpoint.host, @public_endpoint.port).tap { |c| c.read_timeout = request_timeout_in_seconds })
+        Net::HTTP.new(@public_endpoint.host, @public_endpoint.port).tap do |c|
+          c.read_timeout = request_timeout_in_seconds
+          c.use_ssl = true if @private_endpoint.scheme.start_with?('https')
+        end
+       )
     end
 
     def local?
