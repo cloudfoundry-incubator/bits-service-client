@@ -31,14 +31,18 @@ RSpec.describe BitsService::Client do
     before do
       # uri = URI.parse("https://private-host/#{resource_type}/#{key}")
       # stub_request(:head, uri).to_return(status: 200)
-      stub_request(:post, "https://private-host/app_stash/matches").
-      with(:body => "43d27026-76d1-42ae-a33d-3cb98d5c0933",
-           :headers => {'Accept'=>'*/*', 'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3', 'User-Agent'=>'Ruby', 'X-Vcap-Request-Id'=>''}).
-      to_return(:status => 200, :body => "", :headers => {})    end
+      stub_request(:post, "https://private-host/app_stash/matches").with(
+        :body => '<key>', :headers => {
+           'Accept'=>'*/*',
+           'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+           'User-Agent'=>'Ruby',
+           'X-Vcap-Request-Id'=>''}
+           ).to_return(:status => 200, :body => '', :headers => {})
+    end
 
     it 'returns true' do
       resource_pool = BitsService::ResourcePool.new(endpoint: https_options[:private_endpoint], request_timeout_in_seconds: 100, vcap_request_id: '', ca_cert_path: https_options[:ca_cert_path])
-      expect(resource_pool.matches(key)).to be_truthy
+      expect(resource_pool.matches('<key>')).to be_truthy
     end
   end
 

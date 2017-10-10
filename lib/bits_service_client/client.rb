@@ -16,7 +16,7 @@ module BitsService
       raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
       @resource_type = resource_type
       @vcap_request_id = vcap_request_id
-      
+
       @private_http_client = create_logging_http_client(@private_endpoint, bits_service_options, request_timeout_in_seconds)
       @public_http_client = create_logging_http_client(@public_endpoint, bits_service_options, request_timeout_in_seconds)
     end
@@ -125,16 +125,16 @@ module BitsService
       LoggingHttpClient.new(
         Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
           c.read_timeout = request_timeout_in_seconds
-          enable_ssl(c, validated(bits_service_options, :ca_cert_file)) if endpoint.scheme == 'https'
+          enable_ssl(c, validated(bits_service_options, :ca_cert_path)) if endpoint.scheme == 'https'
         end
       )
     end
 
-    def enable_ssl(http_client, ca_cert_file)
+    def enable_ssl(http_client, ca_cert_path)
       cert_store = OpenSSL::X509::Store.new
       cert_store.set_default_paths
-      cert_store.add_file ca_cert_file
-      
+      cert_store.add_file ca_cert_path
+
       http_client.use_ssl = true
       http_client.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http_client.cert_store = cert_store
