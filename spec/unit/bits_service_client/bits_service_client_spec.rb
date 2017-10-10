@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require 'spec_helper'
 require 'ostruct'
+require 'securerandom'
 
 RSpec.describe BitsService::Client do
   let(:resource_type) { [:buildpacks, :droplets, :packages].sample }

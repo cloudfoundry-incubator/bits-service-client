@@ -14,6 +14,7 @@ RSpec.describe BitsService::Client do
       public_endpoint: 'https://public-host',
       username: 'admin',
       password: 'admin',
+      ca_cert_file: "#{File.dirname(__FILE__)}/ca_cert.pem",
     }
   end
   let(:http_options) do
@@ -24,6 +25,18 @@ RSpec.describe BitsService::Client do
       username: 'admin',
       password: 'admin',
     }
+  end
+
+  describe 'Request with https uri schema (Resource Pool)' do
+    before do
+      uri = URI.parse("https://private-host/#{resource_type}/#{key}")
+      stub_request(:head, uri).to_return(status: 200)
+    end
+
+    it 'returns true' do
+      bits_client = BitsService::ResourcePool.new(bits_service_options: https_options, resource_type: resource_type, vcap_request_id: vcap_request_id)
+      expect(bits_client.exists?(key)).to be_truthy
+    end
   end
 
   describe 'Request with https uri schema' do
