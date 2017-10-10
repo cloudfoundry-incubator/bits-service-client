@@ -16,20 +16,9 @@ module BitsService
       raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
       @resource_type = resource_type
       @vcap_request_id = vcap_request_id
-      @private_http_client = LoggingHttpClient.new(
-        Net::HTTP.new(@private_endpoint.host, @private_endpoint.port).tap do |c|
-          c.read_timeout = request_timeout_in_seconds
-          c.use_ssl = true if @private_endpoint.scheme.start_with?('https')
-          c.verify_mode = OpenSSL::SSL::VERIFY_PEER if @private_endpoint.scheme.start_with?('https')
-        end
-        )
-      @public_http_client = LoggingHttpClient.new(
-        Net::HTTP.new(@public_endpoint.host, @public_endpoint.port).tap do |c|
-          c.read_timeout = request_timeout_in_seconds
-          c.use_ssl = true if @public_endpoint.scheme.start_with?('https')
-          c.verify_mode = OpenSSL::SSL::VERIFY_PEER if @public_endpoint.scheme.start_with?('https')
-        end
-       )
+
+      @private_http_client = create_logging_http_client(@private_endpoint, bits_service_options, request_timeout_in_seconds)
+      @public_http_client = create_logging_http_client(@public_endpoint, bits_service_options, request_timeout_in_seconds)
     end
 
     def local?
@@ -131,6 +120,25 @@ module BitsService
     private
 
     attr_reader :resource_type
+
+    def create_logging_http_client(endpoint, bits_service_options, request_timeout_in_seconds)
+      LoggingHttpClient.new(
+        Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
+          c.read_timeout = request_timeout_in_seconds
+          enable_ssl(c, validated(bits_service_options, :ca_cert_path)) if endpoint.scheme == 'https'
+        end
+      )
+    end
+
+    def enable_ssl(http_client, ca_cert_path)
+      cert_store = OpenSSL::X509::Store.new
+      cert_store.set_default_paths
+      cert_store.add_file ca_cert_path
+
+      http_client.use_ssl = true
+      http_client.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      http_client.cert_store = cert_store
+    end
 
     def generate_private_url(guid)
       path = resource_path(guid)

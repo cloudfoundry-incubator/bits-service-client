@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require 'json'
 require 'net/http/post/multipart'
+require 'openssl'
 
 require 'bits_service_client/version'
 require 'bits_service_client/blob'
