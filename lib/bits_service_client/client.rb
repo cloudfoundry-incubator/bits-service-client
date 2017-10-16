@@ -125,7 +125,7 @@ module BitsService
       LoggingHttpClient.new(
         Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
           c.read_timeout = request_timeout_in_seconds
-          if bits_service_options.key_exist?(:ca_cert_path)
+          if bits_service_options.has_key?(:ca_cert_path)
             ca_cert_path = bits_service_options[:ca_cert_path]
           else
             logger.info("Using bits-service client with root ca certs only (no configured ca_cert_path).")
