@@ -362,7 +362,9 @@ RSpec.describe BitsService::Client do
   end
 
   context 'Logging' do
+    # TODO (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
     it 'logs the request being made' do
+      allow_any_instance_of(Steno::Logger).to receive(:info).with('Using bits-service client with root ca certs only (no configured ca_cert_path).')
       allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
 
       expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', {
@@ -380,6 +382,7 @@ RSpec.describe BitsService::Client do
     end
 
     it 'logs the response being received' do
+      allow_any_instance_of(Steno::Logger).to receive(:info).with('Using bits-service client with root ca certs only (no configured ca_cert_path).')
       allow_any_instance_of(Steno::Logger).to receive(:info).with('Request', anything)
       expect_any_instance_of(Steno::Logger).to receive(:info).with('Response', {
         code: '201',
