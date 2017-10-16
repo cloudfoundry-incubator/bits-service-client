@@ -125,7 +125,13 @@ module BitsService
       LoggingHttpClient.new(
         Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
           c.read_timeout = request_timeout_in_seconds
-          enable_ssl(c, validated(bits_service_options, :ca_cert_path)) if endpoint.scheme == 'https'
+          if bits_service_options.key_exist?(:ca_cert_path)
+            ca_cert_path = bits_service_options[:ca_cert_path]
+          else
+            logger.info("Using bits-service client with root ca certs only (no configured ca_cert_path).")
+            ca_cert_path = nil
+          end
+          enable_ssl(c, ca_cert_path) if endpoint.scheme == 'https'
         end
       )
     end
@@ -133,7 +139,7 @@ module BitsService
     def enable_ssl(http_client, ca_cert_path)
       cert_store = OpenSSL::X509::Store.new
       cert_store.set_default_paths
-      cert_store.add_file ca_cert_path
+      cert_store.add_file ca_cert_path if ca_cert_path
 
       http_client.use_ssl = true
       http_client.verify_mode = OpenSSL::SSL::VERIFY_PEER
