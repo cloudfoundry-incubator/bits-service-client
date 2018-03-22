@@ -26,5 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rb-readline'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'rubocop'
-  spec.add_development_dependency 'webmock', '= 1.20.4'
+  spec.add_development_dependency 'webmock', '= 2.3.1'
 end

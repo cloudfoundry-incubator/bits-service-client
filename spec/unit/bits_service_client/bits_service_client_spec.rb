@@ -119,7 +119,7 @@ RSpec.describe BitsService::Client do
   describe '#cp_to_blobstore' do
     it 'makes the correct request to the bits-service' do
       request = stub_request(:put, private_resource_endpoint).
-                with(body: /name="#{resource_type.to_s.singularize}"/).
+                with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}"/ }.
                 to_return(status: 201)
 
       subject.cp_to_blobstore(file_path, key)
@@ -177,7 +177,7 @@ RSpec.describe BitsService::Client do
       download_request = stub_request(:get, private_resource_endpoint).
                          to_return(status: 200, body: File.new(file_path))
       upload_request = stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
-                       with(body: /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/).
+                       with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
                        to_return(status: 201)
 
       subject.cp_file_between_keys(key, destination_key)
@@ -191,7 +191,7 @@ RSpec.describe BitsService::Client do
       stub_request(:get, 'http://somewhere.example.com').
         to_return(status: 200, body: File.new(file_path))
       stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
-        with(body: /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/).
+        with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
         to_return(status: 201)
 
       subject.cp_file_between_keys(key, destination_key)
@@ -231,9 +231,11 @@ RSpec.describe BitsService::Client do
   describe '#blob' do
     before do
       stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 200)
-      stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").
+      stub_request(:get, "http://private-host/sign/#{resource_type}/#{key}").
+        with(basic_auth: ['admin', 'admin']).
         to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?signature=x")
-      stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}?verb=put").
+      stub_request(:get, "http://private-host/sign/#{resource_type}/#{key}?verb=put").
+        with(basic_auth: ['admin', 'admin']).
         to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?verb=put&signature=y")
     end
 
@@ -260,7 +262,9 @@ RSpec.describe BitsService::Client do
       end
 
       it 'used the redirected url as public_download_url' do
-        stub_request(:get, "http://admin:admin@private-host/sign/#{resource_type}/#{key}").to_return(status: 302, headers: { location: 'some-redirect-2' })
+        stub_request(:get, "http://private-host/sign/#{resource_type}/#{key}").
+          with(basic_auth: ['admin', 'admin']).
+          to_return(status: 302, headers: { location: 'some-redirect-2' })
         expect(subject.blob(key).public_download_url).to eq('some-redirect-2')
       end
     end
@@ -352,7 +356,7 @@ RSpec.describe BitsService::Client do
   describe 'forwards vcap-request-id' do
     it 'includes the header with a POST request' do
       request = stub_request(:put, private_resource_endpoint).
-                with(body: /name="#{resource_type.to_s.singularize}"/).
+                with() { |request| request.boyd=~ /name="#{resource_type.to_s.singularize}"/ }.
                 with(headers: { 'X_VCAP_REQUEST_ID' => vcap_request_id }).
                 to_return(status: 201)
 

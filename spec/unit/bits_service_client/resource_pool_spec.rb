@@ -68,7 +68,7 @@ module BitsService
 
         it 'makes the correct request to the bits endpoint' do
           request = stub_request(:post, File.join(endpoint, 'app_stash/matches')).
-                    with(body: resources.to_json).
+                    with() { |request| request.body =~ /#{resources.to_json}/ }.
                     to_return(status: 200, body: [].to_json)
 
           subject.matches(resources.to_json)
@@ -99,7 +99,7 @@ module BitsService
 
         it 'posts a zip file with new bits' do
           request = stub_request(:post, File.join(endpoint, 'app_stash/entries')).
-                    with(body: /.*application".*/).
+                    with() { |request| request.body =~ /.*application".*/ }.
                     to_return(status: 201)
 
           subject.upload_entries(zip)
@@ -108,7 +108,7 @@ module BitsService
 
         it 'returns the request response' do
           stub_request(:post, File.join(endpoint, 'app_stash/entries')).
-            with(body: /.*application".*/).
+            with() { |request| request.body =~ /.*application".*/ }.
             to_return(status: 201)
 
           response = subject.upload_entries(zip)
