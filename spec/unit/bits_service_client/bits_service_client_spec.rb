@@ -357,7 +357,7 @@ RSpec.describe BitsService::Client do
     it 'includes the header with a POST request' do
       request = stub_request(:put, private_resource_endpoint).
                 with() { |request| request.boyd=~ /name="#{resource_type.to_s.singularize}"/ }.
-                with(headers: { 'X_VCAP_REQUEST_ID' => vcap_request_id }).
+                with(headers: { 'X-VCAP-REQUEST-ID' => vcap_request_id }).
                 to_return(status: 201)
 
       subject.cp_to_blobstore(file_path, key)

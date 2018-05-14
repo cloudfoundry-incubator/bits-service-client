@@ -35,7 +35,7 @@ module BitsService
         vcap_request_id: vcap_request_id,
       })
 
-      request.add_field('X_VCAP_REQUEST_ID', vcap_request_id)
+      request.add_field('X-VCAP-REQUEST-ID', vcap_request_id)
 
       @http_client.request(request).tap do |response|
         @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
