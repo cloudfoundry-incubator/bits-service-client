@@ -94,38 +94,8 @@ module BitsService
         end
       end
 
-      describe '#upload_entries' do
-        let(:zip) { Tempfile.new('entry.zip') }
-
-        it 'posts a zip file with new bits' do
-          request = stub_request(:post, File.join(endpoint, 'app_stash/entries')).
-                    with() { |request| request.body =~ /.*application".*/ }.
-                    to_return(status: 201)
-
-          subject.upload_entries(zip)
-          expect(request).to have_been_requested
-        end
-
-        it 'returns the request response' do
-          stub_request(:post, File.join(endpoint, 'app_stash/entries')).
-            with() { |request| request.body =~ /.*application".*/ }.
-            to_return(status: 201)
-
-          response = subject.upload_entries(zip)
-          expect(response).to be_a(Net::HTTPCreated)
-        end
-
-        it 'raises an error when the response is not 201' do
-          stub_request(:post, File.join(endpoint, 'app_stash/entries')).
-            to_return(status: 400, body: '{"description":"bits-failure"}')
-
-          expect {
-            subject.upload_entries(zip)
-          }.to raise_error(BitsService::Errors::Error, /bits-failure/)
-        end
-      end
-
       describe '#bundles' do
+        let(:zip) { Tempfile.new('entry.zip') }
         let(:order) {
           [{ 'fn' => 'app.rb', 'sha1' => '12345' }]
         }
@@ -134,28 +104,27 @@ module BitsService
 
         it 'makes the correct request to the bits service' do
           request = stub_request(:post, File.join(endpoint, 'app_stash/bundles')).
-                    with(body: order.to_json).
-                    to_return(status: 200, body: content_bits)
+            with() { |request|
+              request.body =~ /.*application".*/ &&
+              request.body =~ /.*resources".*/ &&
+              request.body =~ /.*#{order.to_json}.*/
+            }.to_return(status: 200)
 
-          subject.bundles(order.to_json)
+          response = subject.bundles(order.to_json, zip)
           expect(request).to have_been_requested
-        end
-
-        it 'returns the request response' do
-          stub_request(:post, File.join(endpoint, 'app_stash/bundles')).
-            with(body: order.to_json).
-            to_return(status: 200, body: content_bits)
-
-          response = subject.bundles(order.to_json)
           expect(response).to be_a(Net::HTTPOK)
         end
 
         it 'raises an error when the response is not 200' do
           stub_request(:post, File.join(endpoint, 'app_stash/bundles')).
-            to_return(status: 400, body: '{"description":"bits-failure"}')
+            with() { |request|
+              request.body =~ /.*application".*/ &&
+              request.body =~ /.*resources".*/ &&
+              request.body =~ /.*#{order.to_json}.*/
+            }.to_return(status: 400, body: '{"description":"bits-failure"}')
 
           expect {
-            subject.bundles(order.to_json)
+            subject.bundles(order.to_json, zip)
           }.to raise_error(BitsService::Errors::Error, /bits-failure/)
         end
       end

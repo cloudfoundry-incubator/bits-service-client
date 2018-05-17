@@ -15,15 +15,13 @@ module BitsService
       end
     end
 
-    def upload_entries(entries_path)
-      with_file_attachment!(entries_path, 'entries.zip') do |file_attachment|
-        body = { application: file_attachment }
-        multipart_post('/app_stash/entries', body, @vcap_request_id)
-      end
-    end
-
-    def bundles(resources_json)
-      post('/app_stash/bundles', resources_json, @vcap_request_id).tap do |response|
+    def bundles(resources_json, entries_path)
+      validate_file! entries_path
+      body = {
+        resources: UploadIO.new(StringIO.new(resources_json),'application/json', 'resources.json'),
+        application: UploadIO.new(entries_path, 'application/octet-stream', 'entries.zip')
+      }
+      multipart_post('/app_stash/bundles', body, @vcap_request_id).tap do |response|
         validate_response_code!(200, response)
       end
     end
@@ -46,15 +44,6 @@ module BitsService
       fail Errors::UnexpectedResponseCode.new(error)
     end
 
-    def with_file_attachment!(file_path, filename, &block)
-      validate_file! file_path
-
-      File.open(file_path) do |file|
-        attached_file = UploadIO.new(file, 'application/octet-stream', filename)
-        yield attached_file
-      end
-    end
-
     def validate_file!(file_path)
       return if File.exist?(file_path)
 
@@ -69,10 +58,7 @@ module BitsService
     end
 
     def multipart_post(path, body, vcap_request_id)
-      request = Net::HTTP::Post::Multipart.new(path, body)
-      do_request(http_client, request, vcap_request_id).tap do |response|
-        validate_response_code!(201, response)
-      end
+      do_request(http_client, Net::HTTP::Post::Multipart.new(path, body), vcap_request_id)
     end
 
     def do_request(http_client, request, vcap_request_id)
