@@ -15,16 +15,15 @@ module BitsService
       end
     end
 
-    def upload_entries(entries_path)
+    def bundles(resources_json, entries_path)
       with_file_attachment!(entries_path, 'entries.zip') do |file_attachment|
-        body = { application: file_attachment }
-        multipart_post('/app_stash/entries', body, @vcap_request_id)
-      end
-    end
-
-    def bundles(resources_json)
-      post('/app_stash/bundles', resources_json, @vcap_request_id).tap do |response|
-        validate_response_code!(200, response)
+        body = {
+          resources: resources_json,
+          application: file_attachment
+        }
+        multipart_post('/app_stash/bundles', body, @vcap_request_id).tap do |response|
+          validate_response_code!(200, response)
+        end
       end
     end
 
