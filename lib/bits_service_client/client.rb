@@ -165,7 +165,7 @@ module BitsService
         response: response
       }.to_json
 
-      logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{error}")
+      logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{response.code}")
 
       fail BlobstoreError.new(error)
     end

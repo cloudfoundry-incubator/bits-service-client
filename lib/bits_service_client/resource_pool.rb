@@ -41,7 +41,7 @@ module BitsService
         response: response
       }.to_json
 
-      @logger.error("UnexpectedResponseCode: expected #{expected} got #{error}")
+      @logger.error("UnexpectedResponseCode: expected #{expected} got #{response.code}")
 
       fail Errors::UnexpectedResponseCode.new(error)
     end
