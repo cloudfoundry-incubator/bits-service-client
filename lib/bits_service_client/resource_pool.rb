@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module BitsService
   class ResourcePool
     def initialize(endpoint:, request_timeout_in_seconds:, vcap_request_id: '', ca_cert_path: nil)
@@ -16,13 +17,19 @@ module BitsService
     end
 
     def bundles(resources_json, entries_path)
-      validate_file! entries_path
-      body = {
-        resources: UploadIO.new(StringIO.new(resources_json),'application/json', 'resources.json'),
-        application: UploadIO.new(entries_path, 'application/octet-stream', 'entries.zip')
-      }
-      multipart_post('/app_stash/bundles', body, @vcap_request_id).tap do |response|
-        validate_response_code!(200, response)
+      if entries_path.to_s == ''
+        post('/app_stash/bundles', resources_json, @vcap_request_id).tap do |response|
+          validate_response_code!(200, response)
+        end
+      else
+        validate_file! entries_path
+        body = {
+          resources: UploadIO.new(StringIO.new(resources_json), 'application/json', 'resources.json'),
+          application: UploadIO.new(entries_path, 'application/octet-stream', 'entries.zip')
+        }
+        multipart_post('/app_stash/bundles', body, @vcap_request_id).tap do |response|
+          validate_response_code!(200, response)
+        end
       end
     end
 
@@ -67,7 +74,7 @@ module BitsService
         path: request.path,
         address: http_client.address,
         port: http_client.port,
-        vcap_request_id: vcap_request_id,
+        vcap_request_id: vcap_request_id
       })
 
       request.add_field('X-VCAP-REQUEST-ID', vcap_request_id)
@@ -75,7 +82,7 @@ module BitsService
       http_client.request(request).tap do |response|
         @logger.info('Response', {
           code: response.code,
-          vcap_request_id: vcap_request_id,
+          vcap_request_id: vcap_request_id
         })
       end
     end
