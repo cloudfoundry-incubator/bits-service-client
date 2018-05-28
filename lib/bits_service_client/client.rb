@@ -75,7 +75,7 @@ module BitsService
       Blob.new(
         guid: key,
         public_download_url: signed_url(key),
-        public_upload_url: signed_url(key, verb: 'put')+'?async=true',
+        public_upload_url: signed_url(key, verb: 'put')+'&async=true',
         internal_download_url: generate_private_url(key)
       )
     end
