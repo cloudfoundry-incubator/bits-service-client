@@ -248,7 +248,7 @@ RSpec.describe BitsService::Client do
     end
 
     it 'returns a blob object with public upload_url' do
-      expect(subject.blob(key).public_upload_url).to eq("http://public-host/#{resource_type}/#{key}?verb=put&signature=y")
+      expect(subject.blob(key).public_upload_url).to eq("http://public-host/#{resource_type}/#{key}?verb=put&signature=y?async=true")
     end
 
     it 'returns a blob object with internal download_url' do
