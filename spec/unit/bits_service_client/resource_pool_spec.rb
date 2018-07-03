@@ -94,6 +94,17 @@ module BitsService
         end
       end
 
+      describe '#signed_matches_url' do
+        it 'makes the correct request to the bits endpoint' do
+          request = stub_request(:get, File.join(endpoint, 'sign/app_stash/matches?verb=post')).
+                    to_return(status: 200, body: "example.com/the/signed/url")
+
+          signed_url = subject.signed_matches_url()
+
+          expect(signed_url).to eq("example.com/the/signed/url")
+        end
+      end
+
       describe '#bundles' do
         let(:zip) { Tempfile.new('entry.zip') }
         let(:order) {

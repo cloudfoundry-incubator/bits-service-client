@@ -16,6 +16,12 @@ module BitsService
       end
     end
 
+    def signed_matches_url()
+      response = do_request(http_client, Net::HTTP::Get.new('/sign/app_stash/matches?verb=post'), @vcap_request_id)
+      validate_response_code!(200, response)
+      response.body
+    end
+
     def bundles(resources_json, entries_path)
       if entries_path.to_s == ''
         post('/app_stash/bundles', resources_json, @vcap_request_id).tap do |response|
