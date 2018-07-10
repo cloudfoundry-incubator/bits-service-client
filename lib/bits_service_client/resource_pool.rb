@@ -2,12 +2,14 @@
 
 module BitsService
   class ResourcePool
-    def initialize(endpoint:, request_timeout_in_seconds:, vcap_request_id: '', ca_cert_path: nil)
+    def initialize(endpoint:, request_timeout_in_seconds:, vcap_request_id: '', ca_cert_path: nil, username:, password:)
       @endpoint = URI.parse(endpoint)
       @request_timeout_in_seconds = request_timeout_in_seconds
       @vcap_request_id = vcap_request_id
       @logger = Steno.logger('cc.bits_service_client')
       @ca_cert_path = ca_cert_path
+      @username = username
+      @password = password
     end
 
     def matches(resources_json)
@@ -17,7 +19,9 @@ module BitsService
     end
 
     def signed_matches_url()
-      response = do_request(http_client, Net::HTTP::Get.new('/sign/app_stash/matches?verb=post'), @vcap_request_id)
+      req = Net::HTTP::Get.new('/sign/app_stash/matches?verb=post')
+      req.basic_auth(@username, @password)
+      response = do_request(http_client, req, @vcap_request_id)
       validate_response_code!(200, response)
       response.body
     end

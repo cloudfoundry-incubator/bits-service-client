@@ -41,7 +41,14 @@ RSpec.describe BitsService::Client do
     end
 
     it 'returns true' do
-      resource_pool = BitsService::ResourcePool.new(endpoint: https_options[:private_endpoint], request_timeout_in_seconds: 100, vcap_request_id: '', ca_cert_path: https_options[:ca_cert_path])
+      resource_pool = BitsService::ResourcePool.new(
+        endpoint: https_options[:private_endpoint],
+        request_timeout_in_seconds: 100,
+        vcap_request_id: '',
+        ca_cert_path: https_options[:ca_cert_path],
+        username: 'me',
+        password: 'mypw',
+      )
       expect(resource_pool.matches('<key>')).to be_truthy
     end
   end

@@ -14,6 +14,8 @@ module BitsService
       endpoint: endpoint,
       request_timeout_in_seconds: request_timeout_in_seconds,
       vcap_request_id: vcap_request_id,
+      username: 'me',
+      password: 'mypw',
     )
     }
 
@@ -97,6 +99,7 @@ module BitsService
       describe '#signed_matches_url' do
         it 'makes the correct request to the bits endpoint' do
           request = stub_request(:get, File.join(endpoint, 'sign/app_stash/matches?verb=post')).
+                    with(basic_auth: ['me', 'mypw']).
                     to_return(status: 200, body: "example.com/the/signed/url")
 
           signed_url = subject.signed_matches_url()
