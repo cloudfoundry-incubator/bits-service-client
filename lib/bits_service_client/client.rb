@@ -32,12 +32,29 @@ module BitsService
       response.code.to_i != 404
     end
 
-    def cp_to_blobstore(source_path, destination_key)
+    def cp_to_blobstore(source_path, destination_key, resources: nil)
       filename = File.basename(source_path)
       with_file_attachment!(source_path, filename) do |file_attachment|
         body = { :"#{@resource_type.to_s.singularize}" => file_attachment }
+
+        if resources != nil
+          body[:resources] = resources.to_json
+        end
+
         response = @private_http_client.do_request(Net::HTTP::Put::Multipart.new(resource_path(destination_key), body), @vcap_request_id)
         validate_response_code!(201, response)
+        if response.body == nil
+          logger.error("UnexpectedMissingBody: expected body with json payload. Got empty body.")
+
+          fail BlobstoreError.new({
+            response_code: response.code,
+            response_body: response.body,
+            response: response
+          }.to_json)
+        end
+        shas = JSON.parse(response.body, symbolize_names: true)
+        validate_keys_present!([:sha1, :sha256], shas, response)
+        return shas
       end
     end
 
@@ -168,6 +185,18 @@ module BitsService
       logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{response.code}")
 
       fail BlobstoreError.new(error)
+    end
+
+    def validate_keys_present!(expected_keys, map, response)
+      return if expected_keys.all? { |expected_key| map.keys.include?(expected_key) }
+
+      logger.error("UnexpectedResponseBody: expected json with keys '#{expected_keys}'. Got #{map}")
+
+      fail BlobstoreError.new({
+        response_code: response.code,
+        response_body: response.body,
+        response: response
+      }.to_json)
     end
 
     def resource_path(guid)

@@ -120,7 +120,7 @@ RSpec.describe BitsService::Client do
     it 'makes the correct request to the bits-service' do
       request = stub_request(:put, private_resource_endpoint).
                 with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}"/ }.
-                to_return(status: 201)
+                to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
@@ -131,6 +131,36 @@ RSpec.describe BitsService::Client do
         stub_request(:put, private_resource_endpoint).to_return(status: 500)
 
         expect { subject.cp_to_blobstore(file_path, key) }.to raise_error(BitsService::BlobstoreError)
+      end
+    end
+
+    context 'response body is empty' do
+      it 'raises a BlobstoreError' do
+        stub_request(:put, private_resource_endpoint).to_return(status: 201)
+
+        expect { subject.cp_to_blobstore(file_path, key) }.to raise_error(BitsService::BlobstoreError)
+      end
+    end
+
+    context 'shas are not present in json response body' do
+      it 'raises a BlobstoreError' do
+        stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{}")
+
+        expect { subject.cp_to_blobstore(file_path, key) }.to raise_error(BitsService::BlobstoreError)
+      end
+    end
+
+    context 'resources are passed' do
+      it 'adds them to the multi part upload request' do
+        stub_request(:put, private_resource_endpoint).
+        with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}"/ }.
+        with() { |request| request.body =~ /name=resources/ }.
+        with() { |request| request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
+        to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+
+        shas = subject.cp_to_blobstore(file_path, key, resources: {fn: "filename", sha: 'abc', size: 123})
+
+        expect(shas).to eq({:sha1=>"abc", :sha256=>"def"})
       end
     end
   end
@@ -178,7 +208,7 @@ RSpec.describe BitsService::Client do
                          to_return(status: 200, body: File.new(file_path))
       upload_request = stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
                        with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
-                       to_return(status: 201)
+                       to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
       subject.cp_file_between_keys(key, destination_key)
       expect(download_request).to have_been_requested
@@ -192,7 +222,7 @@ RSpec.describe BitsService::Client do
         to_return(status: 200, body: File.new(file_path))
       stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
         with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
-        to_return(status: 201)
+        to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
       subject.cp_file_between_keys(key, destination_key)
     end
@@ -358,7 +388,7 @@ RSpec.describe BitsService::Client do
       request = stub_request(:put, private_resource_endpoint).
                 with() { |request| request.boyd=~ /name="#{resource_type.to_s.singularize}"/ }.
                 with(headers: { 'X-VCAP-REQUEST-ID' => vcap_request_id }).
-                to_return(status: 201)
+                to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
@@ -379,7 +409,7 @@ RSpec.describe BitsService::Client do
         vcap_request_id: vcap_request_id,
       })
 
-      request = stub_request(:put, private_resource_endpoint).to_return(status: 201)
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
@@ -393,7 +423,7 @@ RSpec.describe BitsService::Client do
         vcap_request_id: vcap_request_id,
       })
 
-      request = stub_request(:put, private_resource_endpoint).to_return(status: 201)
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
