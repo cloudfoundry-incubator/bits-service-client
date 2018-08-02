@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 require 'active_support/inflector'
 require 'bits_service_client/logging_http_client'
+require 'tmpdir'
+require "open3"
 
 module BitsService
   class Client
@@ -33,29 +35,39 @@ module BitsService
     end
 
     def cp_to_blobstore(source_path, destination_key, resources: nil)
-      filename = File.basename(source_path)
-      with_file_attachment!(source_path, filename) do |file_attachment|
-        body = { :"#{@resource_type.to_s.singularize}" => file_attachment }
-
-        if resources != nil
-          body[:resources] = resources.to_json
+      if source_path.to_s.empty?
+        file = Tempfile.new(['empty', '.zip'])
+        source_path = file.path
+        file.close!
+        Dir.mktmpdir do |dir|
+          output, error, status = Open3.capture3(%(/usr/bin/zip #{source_path} #{dir}))
+          unless status.success?
+            logger.error("Could not create a zip with no contents.\n STDOUT: \"#{output}\"\n STDERR: \"#{error}\"")
+            raise Errors::Error.new('Could not create a zip with no contents')
+          end
         end
-
-        response = @private_http_client.do_request(Net::HTTP::Put::Multipart.new(resource_path(destination_key), body), @vcap_request_id)
-        validate_response_code!(201, response)
-        if response.body == nil
-          logger.error("UnexpectedMissingBody: expected body with json payload. Got empty body.")
-
-          fail BlobstoreError.new({
-            response_code: response.code,
-            response_body: response.body,
-            response: response
-          }.to_json)
-        end
-        shas = JSON.parse(response.body, symbolize_names: true)
-        validate_keys_present!([:sha1, :sha256], shas, response)
-        return shas
       end
+
+      body = { :"#{@resource_type.to_s.singularize}" => UploadIO.new(source_path, 'application/octet-stream') }
+
+      if resources != nil
+        body[:resources] = resources.to_json
+      end
+
+      response = @private_http_client.do_request(Net::HTTP::Put::Multipart.new(resource_path(destination_key), body), @vcap_request_id)
+      validate_response_code!(201, response)
+      if response.body == nil
+        logger.error("UnexpectedMissingBody: expected body with json payload. Got empty body.")
+
+        fail BlobstoreError.new({
+          response_code: response.code,
+          response_body: response.body,
+          response: response
+        }.to_json)
+      end
+      shas = JSON.parse(response.body, symbolize_names: true)
+      validate_keys_present!([:sha1, :sha256], shas, response)
+      return shas
     end
 
     def download_from_blobstore(source_key, destination_path, mode: nil)
@@ -202,15 +214,6 @@ module BitsService
     def resource_path(guid)
       prefix = resource_type == :buildpack_cache ? 'buildpack_cache/entries/' : resource_type
       File.join('/', prefix.to_s, guid.to_s)
-    end
-
-    def with_file_attachment!(file_path, filename, &block)
-      raise Errors::FileDoesNotExist.new("Could not find file: #{file_path}") unless File.exist?(file_path)
-
-      File.open(file_path) do |file|
-        attached_file = UploadIO.new(file, 'application/octet-stream', filename)
-        yield attached_file
-      end
     end
 
     def endpoint(http_client)

@@ -153,14 +153,43 @@ RSpec.describe BitsService::Client do
     context 'resources are passed' do
       it 'adds them to the multi part upload request' do
         stub_request(:put, private_resource_endpoint).
-        with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}"/ }.
-        with() { |request| request.body =~ /name=resources/ }.
-        with() { |request| request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
+        with() { |request|
+          request.body =~ /name="#{resource_type.to_s.singularize}"/ &&
+          request.body =~ /name="resources"/ &&
+          request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
         to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
 
         shas = subject.cp_to_blobstore(file_path, key, resources: {fn: "filename", sha: 'abc', size: 123})
 
         expect(shas).to eq({:sha1=>"abc", :sha256=>"def"})
+      end
+    end
+
+    context 'source_path is nil' do
+      it 'uses an empty zip' do
+        stub_request(:put, private_resource_endpoint).
+        with() { |request|
+          request.body =~ /name="#{resource_type.to_s.singularize}"/ &&
+          request.body =~ /name="resources"/ &&
+          request.body =~ /\r\n\r\nPK/ && # PK is the magic number a zip file begins with
+          request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
+        to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+
+        subject.cp_to_blobstore(nil, key, resources: {fn: "filename", sha: 'abc', size: 123})
+      end
+    end
+
+    context 'source_path is empty' do
+      it 'uses an empty zip' do
+        stub_request(:put, private_resource_endpoint).
+        with() { |request|
+          request.body =~ /name="#{resource_type.to_s.singularize}"/ &&
+          request.body =~ /name="resources"/ &&
+          request.body =~ /\r\n\r\nPK/ && # PK is the magic number a zip file begins with
+          request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
+        to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+
+        subject.cp_to_blobstore('', key, resources: {fn: "filename", sha: 'abc', size: 123})
       end
     end
   end
