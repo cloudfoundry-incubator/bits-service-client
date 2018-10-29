@@ -102,28 +102,14 @@ module BitsService
 
     def blob(key)
       Blob.new(
-        guid: key,
-        public_download_url: signed_url(key),
-        public_upload_url: signed_url(key, verb: 'put')+'&async=true',
-        internal_download_url: generate_private_url(key)
+        key: key,
+        private_http_client: @private_http_client,
+        private_endpoint: @private_endpoint,
+        vcap_request_id: @vcap_request_id,
+        username: @username,
+        password: @password,
+        resource_type: @resource_type
       )
-    end
-
-    def signed_url(key, verb: nil)
-      query = if verb.nil?
-                ''
-              else
-                "?verb=#{verb}"
-              end
-
-      response = @private_http_client.get("/sign#{resource_path(key)}#{query}", @vcap_request_id, { username: @username, password: @password })
-      validate_response_code!([200, 302], response)
-
-      response.tap do |result|
-        result.body = result['location'] if result.code.to_i == 302
-      end
-
-      response.body
     end
 
     def delete_blob(blob)
@@ -173,16 +159,6 @@ module BitsService
       http_client.use_ssl = true
       http_client.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http_client.cert_store = cert_store
-    end
-
-    def generate_private_url(guid)
-      path = resource_path(guid)
-
-      @private_http_client.head(path, @vcap_request_id).tap do |response|
-        return response['location'] if response.code.to_i == 302
-      end
-
-      File.join(@private_endpoint.to_s, path)
     end
 
     def validate_response_code!(expected_codes, response)
