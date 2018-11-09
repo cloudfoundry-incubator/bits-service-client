@@ -28,7 +28,7 @@ RSpec.describe BitsService::Client do
     }
   end
 
-  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id) }
+  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id, request_timeout_in_seconds_fast: 1) }
 
   describe 'username missing' do
     before { options.delete(:username) }
@@ -457,5 +457,62 @@ RSpec.describe BitsService::Client do
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
     end
+  end
+  context 'Logging' do
+    # TODO (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
+    it 'logs the request being made' do
+      allow_any_instance_of(Steno::Logger).to receive(:info).with('Using bits-service client with root ca certs only (no configured ca_cert_path).')
+      allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
+
+      expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', {
+        method: 'PUT',
+        path: ['/' + resource_type.to_s, key].join('/'),
+        address: 'private-host',
+        port: 80,
+        vcap_request_id: vcap_request_id,
+      })
+
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+
+      subject.cp_to_blobstore(file_path, key)
+      expect(request).to have_been_requested
+    end
+  end
+
+  context 'HTTP Blobstore requests with little or no payload' do
+    it 'times out fast when delete' do
+    request = stub_request(:delete , private_resource_endpoint).
+                to_return(status: 204, body: lambda { |request| sleep 10; "" })
+    startTime = Time.now
+    subject.send("delete", key)
+    endTime = Time.now
+    expect(startTime - endTime).should be < 2
+
+
+    end
+    #  it 'times out fast when exists? is called' do
+    #  request = stub_request(:head , private_resource_endpoint).
+    #              to_return(status: 204, body: lambda { |request| sleep 2; "" })
+
+    #  startTime = Time.now
+    #  subject.send("exists?", key)
+    #  endTime = Time.now
+
+    #  end
+
+    # it 'times out fast when delete_all' do
+    # request = stub_request("GET" , private_resource_endpoint).
+    #             to_return(status: 204, body: lambda { |request| sleep 2; "" })
+
+    # subject.send("", key)
+    # end
+
+    # it 'times out fast when delete_all_in_path' do
+    # request = stub_request("GET" , private_resource_endpoint).
+    #             to_return(status: 204, body: lambda { |request| sleep 2; "" })
+
+    # subject.send("", key)
+    # end
+
   end
 end

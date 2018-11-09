@@ -9,7 +9,7 @@ module BitsService
     ResourceTypeNotPresent = Class.new(StandardError)
     ConfigurationError = Class.new(StandardError)
 
-    def initialize(bits_service_options:, resource_type:, vcap_request_id: '', request_timeout_in_seconds: 900)
+    def initialize(bits_service_options:, resource_type:, vcap_request_id: '', request_timeout_in_seconds: 900, request_timeout_in_seconds_fast: 10)
       @username = validated(bits_service_options, :username)
       @password = validated(bits_service_options, :password)
       @private_endpoint = validated_http_url(bits_service_options, :private_endpoint)
@@ -20,6 +20,7 @@ module BitsService
       @vcap_request_id = vcap_request_id
 
       @private_http_client = create_logging_http_client(@private_endpoint, bits_service_options, request_timeout_in_seconds)
+      @private_http_client_fast_timeout = create_logging_http_client(@private_endpoint, bits_service_options, request_timeout_in_seconds_fast)
       @public_http_client = create_logging_http_client(@public_endpoint, bits_service_options, request_timeout_in_seconds)
     end
 
@@ -28,7 +29,7 @@ module BitsService
     end
 
     def exists?(key)
-      response = @private_http_client.head(resource_path(key), @vcap_request_id)
+      response = @private_http_client_fast_timeout.head(resource_path(key), @vcap_request_id)
       validate_response_code!([200, 302, 404], response)
 
       response.code.to_i != 404
@@ -92,9 +93,10 @@ module BitsService
     end
 
     def delete(key)
-      response = @private_http_client.delete(resource_path(key), @vcap_request_id)
+      puts "Debug xxx DELETE start #{Time.now}"
+      response = @private_http_client_fast_timeout.delete(resource_path(key), @vcap_request_id)
       validate_response_code!([204, 404], response)
-
+      puts "Debug xxx DELETE end #{Time.now}"
       if response.code.to_i == 404
         raise FileNotFound.new("Could not find object '#{key}', #{response.code}/#{response.body}")
       end
@@ -112,6 +114,23 @@ module BitsService
       )
     end
 
+    def signed_url(key, verb: nil)
+      query = if verb.nil?
+                ''
+              else
+                "?verb=#{verb}"
+              end
+
+      response = @private_http_client_fast_timeout.get("/sign#{resource_path(key)}#{query}", @vcap_request_id, { username: @username, password: @password })
+      validate_response_code!([200, 302], response)
+
+      response.tap do |result|
+        result.body = result['location'] if result.code.to_i == 302
+      end
+
+      response.body
+    end
+
     def delete_blob(blob)
       delete(blob.guid)
     end
@@ -119,7 +138,7 @@ module BitsService
     def delete_all(_=nil)
       raise NotImplementedError unless :buildpack_cache == resource_type
 
-      @private_http_client.delete(resource_path(''), @vcap_request_id).tap do |response|
+      @private_http_client_fast_timeout.delete(resource_path(''), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
     end
@@ -127,7 +146,7 @@ module BitsService
     def delete_all_in_path(path)
       raise NotImplementedError unless :buildpack_cache == resource_type
 
-      @private_http_client.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
+      @private_http_client_fast_timeout.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
     end
