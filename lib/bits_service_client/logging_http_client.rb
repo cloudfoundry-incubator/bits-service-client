@@ -23,6 +23,7 @@ module BitsService
     end
 
     def delete(path, vcap_request_id)
+      puts "DEBUG path: #{path} vcap_id: #{vcap_request_id}"
       do_request(Net::HTTP::Delete.new(path), vcap_request_id)
     end
 

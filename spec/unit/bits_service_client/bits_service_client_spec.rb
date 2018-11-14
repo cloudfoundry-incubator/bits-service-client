@@ -2,6 +2,7 @@
 require 'spec_helper'
 require 'ostruct'
 require 'securerandom'
+require_relative 'fake_bits_service'
 
 RSpec.describe BitsService::Client do
   let(:resource_type) { [:buildpacks, :droplets, :packages].sample }
@@ -21,14 +22,14 @@ RSpec.describe BitsService::Client do
   let(:options) do
     {
       enabled: true,
-      private_endpoint: 'http://private-host',
-      public_endpoint: 'http://public-host',
+      private_endpoint: 'http://private-host:8080',
+      public_endpoint: 'http://public-host:8080',
       username: 'admin',
       password: 'admin',
     }
   end
 
-  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id, request_timeout_in_seconds_fast: 1) }
+  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id, request_timeout_in_seconds_fast: 3) }
 
   describe 'username missing' do
     before { options.delete(:username) }
@@ -480,16 +481,28 @@ RSpec.describe BitsService::Client do
   end
 
   context 'HTTP Blobstore requests with little or no payload' do
-    it 'times out fast when delete' do
-    request = stub_request(:delete , private_resource_endpoint).
-                to_return(status: 204, body: lambda { |request| sleep 10; "" })
-    startTime = Time.now
-    subject.send("delete", key)
-    endTime = Time.now
-    expect(startTime - endTime).should be < 2
+    it "returns early when delte times out" do
+      WebMock.allow_net_connect!
+
+      # request = stub_request(:delete , /localhost:8080/).to_rack(FakeBitsService)
+      # http_request = Net::HTTP.new("localhost","8080")
+      # response = http_request.delete "/timeout"
+      # puts "DEBUG: subject #{subject.inspect}"
+      # puts "DEBUG: RESPONSE: #{response.inspect}"
+      puts "Start XXX"
+      request = stub_request(:delete , private_resource_endpoint).to_rack(FakeBitsService)
+        startTime = Time.now
+
+        expect {
+          subject.delete(key)
+        }.to raise_error(Net::OpenTimeout)
+        endTime = Time.now
+
+        puts "startTime - endTime"
+        # expect(startTime - endTime).should be < 2
 
 
-    end
+      end
     #  it 'times out fast when exists? is called' do
     #  request = stub_request(:head , private_resource_endpoint).
     #              to_return(status: 204, body: lambda { |request| sleep 2; "" })
