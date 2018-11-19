@@ -93,12 +93,8 @@ module BitsService
     end
 
     def delete(key)
-      puts "Debug xxx DELETE start #{Time.now}"
-      puts "Debug xxx DELETE http_client #{@private_http_client_fast_timeout.instance_variables[0]}"
       response = @private_http_client_fast_timeout.delete(resource_path(key), @vcap_request_id)
-      # response = @private_http_client.delete(resource_path(key), @vcap_request_id)
       validate_response_code!([204, 404], response)
-      puts "Debug xxx DELETE end #{Time.now}"
       if response.code.to_i == 404
         raise FileNotFound.new("Could not find object '#{key}', #{response.code}/#{response.body}")
       end
@@ -158,9 +154,9 @@ module BitsService
     attr_reader :resource_type
 
     def create_logging_http_client(endpoint, bits_service_options, request_timeout_in_seconds)
-
-        superclient = Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
-          # c.read_timeout = request_timeout_in_seconds
+      LoggingHttpClient.new(
+        Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
+          c.read_timeout = request_timeout_in_seconds
           if bits_service_options.has_key?(:ca_cert_path)
             ca_cert_path = bits_service_options[:ca_cert_path]
           else
@@ -169,9 +165,7 @@ module BitsService
           end
           enable_ssl(c, ca_cert_path) if endpoint.scheme == 'https'
         end
-        superclient.read_timeout = request_timeout_in_seconds
-      puts "Debug: XXX superclient: #{superclient.read_timeout.inspect}"
-      return LoggingHttpClient.new(superclient)
+      )
     end
 
     def enable_ssl(http_client, ca_cert_path)

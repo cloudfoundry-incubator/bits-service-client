@@ -53,7 +53,7 @@ describe BitsService::Client, :integration_test do
             }.to raise_error(Net::ReadTimeout)
             endTime=Time.now
             puts("Duration for /delete: #{startTime - endTime}")
-            (startTime - endTime).should be < 3
+            expect(startTime - endTime).to be < 3
         end
 
         it 'times out fast when exists? is called' do
@@ -63,7 +63,7 @@ describe BitsService::Client, :integration_test do
             }.to raise_error(Net::ReadTimeout)
             endTime=Time.now
             puts("Duration for /exists?: #{startTime - endTime}")
-            (startTime - endTime).should be < 3
+            expect(startTime - endTime).to be < 3
         end
 
         context "times out fast" do
@@ -77,7 +77,7 @@ describe BitsService::Client, :integration_test do
                 }.to raise_error(Net::ReadTimeout)
                 endTime=Time.now
                 puts("Duration for /delete_all?: #{startTime - endTime}")
-                (startTime - endTime).should be < 3
+                expect(startTime - endTime).to be < 3
             end
 
             it 'when delete_all_in_path is called' do
@@ -87,7 +87,7 @@ describe BitsService::Client, :integration_test do
                 }.to raise_error(Net::ReadTimeout)
                 endTime=Time.now
                 puts("Duration for /delete_all_in_path?: #{startTime - endTime}")
-                (startTime - endTime).should be < 3
+                expect(startTime - endTime).to be < 3
             end
         end
     end
