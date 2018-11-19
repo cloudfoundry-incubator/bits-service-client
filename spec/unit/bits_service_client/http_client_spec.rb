@@ -3,7 +3,7 @@ require 'spec_helper'
 require 'ostruct'
 require 'securerandom'
 
-RSpec.describe BitsService::Client do
+RSpec.describe BitsService::Client, unit: true do
   let(:resource_type) { 'buildpacks'}
   let(:vcap_request_id) { '4711' }
   let(:key) { SecureRandom.uuid }
