@@ -41,5 +41,13 @@ module BitsService
         @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
       end
     end
+    # TODO: make use of it
+    def with_metric(metric, options={})
+      try_update_status(options) do
+        statsd.count("bits.client_#{metric}-count.sparse-avg") do
+          yield
+        end
+      end
+    end
   end
 end
