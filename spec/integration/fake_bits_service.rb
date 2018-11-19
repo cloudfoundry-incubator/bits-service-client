@@ -12,6 +12,11 @@ class FakeBitsService < Sinatra::Base
     status 200
   end
 
+  head %r{/.*/.*} do
+    sleep 10
+    status 200
+  end
+
   get '/status' do
     status 200
   end
