@@ -37,17 +37,14 @@ module BitsService
 
       request.add_field('X-VCAP-REQUEST-ID', vcap_request_id)
 
-      @http_client.request(request).tap do |response|
-        @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
+      begin
+       response = @http_client.request(request)
+       @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
+       rescue Net::ReadTimeout => ex
+       #the call for statsd goes here @metric_emitter.gauge "bits", 1
+        raise ex
       end
-    end
-    # TODO: make use of it
-    def with_metric(metric, options={})
-      try_update_status(options) do
-        statsd.count("bits.client_#{metric}-count.sparse-avg") do
-          yield
-        end
-      end
+      response
     end
   end
 end

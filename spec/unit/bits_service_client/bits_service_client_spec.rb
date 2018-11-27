@@ -28,7 +28,7 @@ RSpec.describe BitsService::Client, unit: true  do
     }
   end
 
-  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id, request_timeout_in_seconds_fast: 3) }
+  subject(:client) { BitsService::Client.new(bits_service_options: options, resource_type: resource_type, vcap_request_id: vcap_request_id, request_timeout_in_seconds_fast: 1) }
 
   describe 'username missing' do
     before { options.delete(:username) }
