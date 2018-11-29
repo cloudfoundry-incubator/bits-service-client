@@ -1,9 +1,12 @@
 # frozen_string_literal: true
+require 'statsd'
+
 module BitsService
   class LoggingHttpClient
     def initialize(http_client)
       @http_client = http_client
       @logger = Steno.logger('cc.bits_service_client')
+      @statsd = Statsd.new
     end
 
     def get(path, vcap_request_id, credentials=nil)
@@ -41,8 +44,16 @@ module BitsService
        response = @http_client.request(request)
        @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
        rescue Net::ReadTimeout => ex
-       #the call for statsd goes here @metric_emitter.gauge "bits", 1
-        raise ex
+         @statsd.increment("cc.bits_#{request.method.downcase}.timeout")
+
+         @logger.info('Request timeout', {
+           method: request.method,
+           path: request.path,
+           address: @http_client.address,
+           port: @http_client.port,
+           vcap_request_id: vcap_request_id,
+         })
+         raise ex
       end
       response
     end
