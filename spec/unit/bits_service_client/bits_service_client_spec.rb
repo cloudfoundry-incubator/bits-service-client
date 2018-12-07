@@ -462,24 +462,4 @@ RSpec.describe BitsService::Client, unit: true do
       expect(request).to have_been_requested
     end
   end
-  context 'Logging' do
-    # TODO: (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
-    it 'logs the request being made' do
-      allow_any_instance_of(Steno::Logger).to receive(:info).with('Using bits-service client with root ca certs only (no configured ca_cert_path).')
-      allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
-
-      expect_any_instance_of(Steno::Logger).to receive(:info).with('Request', {
-        method: 'PUT',
-        path: ['/' + resource_type.to_s, key].join('/'),
-        address: 'private-host',
-        port: 80,
-        vcap_request_id: vcap_request_id,
-      })
-
-      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
-
-      subject.cp_to_blobstore(file_path, key)
-      expect(request).to have_been_requested
-    end
-  end
 end

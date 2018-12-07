@@ -42,19 +42,19 @@ module BitsService
       request.add_field('X-VCAP-REQUEST-ID', vcap_request_id)
 
       begin
-       response = @http_client.request(request)
-       @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
-       rescue Net::ReadTimeout => ex
-         @statsd.increment("cc.bits_#{request.method.downcase}.timeout")
+        response = @http_client.request(request)
+        @logger.info('Response', { code: response.code, vcap_request_id: vcap_request_id })
+      rescue Net::ReadTimeout => ex
+        @statsd.increment("cc.bits_#{request.method.downcase}.timeout")
 
-         @logger.info('Request timeout', {
-           method: request.method,
-           path: request.path,
-           address: @http_client.address,
-           port: @http_client.port,
-           vcap_request_id: vcap_request_id,
-         })
-         raise ex
+        @logger.info('Request timeout', {
+          method: request.method,
+          path: request.path,
+          address: @http_client.address,
+          port: @http_client.port,
+          vcap_request_id: vcap_request_id,
+        })
+        raise ex
       end
       response
     end
