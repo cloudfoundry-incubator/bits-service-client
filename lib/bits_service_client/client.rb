@@ -113,29 +113,12 @@ module BitsService
       )
     end
 
-    def signed_url(key, verb: nil)
-      query = if verb.nil?
-                ''
-              else
-                "?verb=#{verb}"
-              end
-
-      response = @private_http_client_fast_timeout.get("/sign#{resource_path(key)}#{query}", @vcap_request_id, { username: @username, password: @password })
-      validate_response_code!([200, 302], response)
-
-      response.tap do |result|
-        result.body = result['location'] if result.code.to_i == 302
-      end
-
-      response.body
-    end
-
     def delete_blob(blob)
       delete(blob.guid)
     end
 
     def delete_all(_=nil)
-      raise NotImplementedError unless :buildpack_cache == resource_type
+      raise NotImplementedError unless resource_type == :buildpack_cache
 
       @private_http_client_fast_timeout.delete(resource_path(''), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
