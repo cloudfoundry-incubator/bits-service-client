@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'spec_helper'
 require 'securerandom'
 
@@ -69,12 +70,12 @@ module BitsService
         end
 
         it 'makes the correct request to the bits endpoint' do
-          request = stub_request(:post, File.join(endpoint, 'app_stash/matches')).
-                    with() { |request| request.body =~ /#{resources.to_json}/ }.
-                    to_return(status: 200, body: [].to_json)
+          upload_request = stub_request(:post, File.join(endpoint, 'app_stash/matches')).
+                           with { |request| request.body =~ /#{resources.to_json}/ }.
+                           to_return(status: 200, body: [].to_json)
 
           subject.matches(resources.to_json)
-          expect(request).to have_been_requested
+          expect(upload_request).to have_been_requested
         end
 
         it 'returns the request response' do
@@ -98,13 +99,13 @@ module BitsService
 
       describe '#signed_matches_url' do
         it 'makes the correct request to the bits endpoint' do
-          request = stub_request(:get, File.join(endpoint, 'sign/app_stash/matches?verb=post')).
-                    with(basic_auth: ['me', 'mypw']).
-                    to_return(status: 200, body: "example.com/the/signed/url")
+          stub_request(:get, File.join(endpoint, 'sign/app_stash/matches?verb=post')).
+            with(basic_auth: ['me', 'mypw']).
+            to_return(status: 200, body: 'example.com/the/signed/url')
 
-          signed_url = subject.signed_matches_url()
+          signed_url = subject.signed_matches_url
 
-          expect(signed_url).to eq("example.com/the/signed/url")
+          expect(signed_url).to eq('example.com/the/signed/url')
         end
       end
 
@@ -117,21 +118,20 @@ module BitsService
         let(:content_bits) { 'tons of bits as ordered' }
 
         it 'makes the correct request to the bits service' do
-          request = stub_request(:post, File.join(endpoint, 'app_stash/bundles')).
-            with() { |request|
-              request.body =~ /.*application".*/ &&
-              request.body =~ /.*resources".*/ &&
-              request.body =~ /.*#{order.to_json}.*/
-            }.to_return(status: 200)
+          upload_request = stub_request(:post, File.join(endpoint, 'app_stash/bundles')).with { |request|
+            request.body =~ /.*application".*/ &&
+            request.body =~ /.*resources".*/ &&
+            request.body =~ /.*#{order.to_json}.*/
+          }.to_return(status: 200)
 
           response = subject.bundles(order.to_json, zip)
-          expect(request).to have_been_requested
+          expect(upload_request).to have_been_requested
           expect(response).to be_a(Net::HTTPOK)
         end
 
         it 'raises an error when the response is not 200' do
           stub_request(:post, File.join(endpoint, 'app_stash/bundles')).
-            with() { |request|
+            with { |request|
               request.body =~ /.*application".*/ &&
               request.body =~ /.*resources".*/ &&
               request.body =~ /.*#{order.to_json}.*/

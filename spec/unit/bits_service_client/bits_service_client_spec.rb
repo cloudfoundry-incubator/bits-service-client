@@ -1,10 +1,11 @@
 # frozen_string_literal: true
+
 require 'spec_helper'
 require 'ostruct'
 require 'securerandom'
 
-RSpec.describe BitsService::Client, unit: true  do
-  let(:resource_type) { [:buildpacks, :droplets, :packages].sample }
+RSpec.describe BitsService::Client, unit: true do
+  let(:resource_type) { %i[buildpacks droplets packages].sample }
   let(:resource_type_singular) { resource_type.to_s.singularize }
   let(:key) { SecureRandom.uuid }
   let(:private_resource_endpoint) { File.join(options[:private_endpoint], resource_type.to_s, key) }
@@ -118,12 +119,12 @@ RSpec.describe BitsService::Client, unit: true  do
 
   describe '#cp_to_blobstore' do
     it 'makes the correct request to the bits-service' do
-      request = stub_request(:put, private_resource_endpoint).
-                with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}"/ }.
-                to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+      upload_request = stub_request(:put, private_resource_endpoint).
+                       with { |request| request.body =~ /name="#{resource_type.to_s.singularize}"/ }.
+                       to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_to_blobstore(file_path, key)
-      expect(request).to have_been_requested
+      expect(upload_request).to have_been_requested
     end
 
     context 'when the response code is not 201' do
@@ -144,7 +145,7 @@ RSpec.describe BitsService::Client, unit: true  do
 
     context 'shas are not present in json response body' do
       it 'raises a BlobstoreError' do
-        stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{}")
+        stub_request(:put, private_resource_endpoint).to_return(status: 201, body: '{}')
 
         expect { subject.cp_to_blobstore(file_path, key) }.to raise_error(BitsService::BlobstoreError)
       end
@@ -153,43 +154,46 @@ RSpec.describe BitsService::Client, unit: true  do
     context 'resources are passed' do
       it 'adds them to the multi part upload request' do
         stub_request(:put, private_resource_endpoint).
-        with() { |request|
+          with { |request|
           request.body =~ /name="#{resource_type.to_s.singularize}"/ &&
           request.body =~ /name="resources"/ &&
-          request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
-        to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+          request.body =~ /{"fn":"filename","sha":"abc","size":123}/
+        }.
+          to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
-        shas = subject.cp_to_blobstore(file_path, key, resources: {fn: "filename", sha: 'abc', size: 123})
+        shas = subject.cp_to_blobstore(file_path, key, resources: { fn: 'filename', sha: 'abc', size: 123 })
 
-        expect(shas).to eq({:sha1=>"abc", :sha256=>"def"})
+        expect(shas).to eq({ sha1: 'abc', sha256: 'def' })
       end
     end
 
     context 'source_path is nil' do
       it 'uses an empty zip' do
         stub_request(:put, private_resource_endpoint).
-        with() { |request|
+          with { |request|
           request.body =~ /name="#{resource_type.to_s.singularize}"/ &&
           request.body =~ /name="resources"/ &&
           request.body =~ /\r\n\r\nPK/ && # PK is the magic number a zip file begins with
-          request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
-        to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+          request.body =~ /{"fn":"filename","sha":"abc","size":123}/
+        }.
+          to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
-        subject.cp_to_blobstore(nil, key, resources: {fn: "filename", sha: 'abc', size: 123})
+        subject.cp_to_blobstore(nil, key, resources: { fn: 'filename', sha: 'abc', size: 123 })
       end
     end
 
     context 'source_path is empty' do
       it 'uses an empty zip' do
         stub_request(:put, private_resource_endpoint).
-        with() { |request|
+          with { |request|
           request.body =~ /name="#{resource_type.to_s.singularize}"/ &&
           request.body =~ /name="resources"/ &&
           request.body =~ /\r\n\r\nPK/ && # PK is the magic number a zip file begins with
-          request.body =~ /{"fn":"filename","sha":"abc","size":123}/ }.
-        to_return(status: 201, body:  "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+          request.body =~ /{"fn":"filename","sha":"abc","size":123}/
+        }.
+          to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
-        subject.cp_to_blobstore('', key, resources: {fn: "filename", sha: 'abc', size: 123})
+        subject.cp_to_blobstore('', key, resources: { fn: 'filename', sha: 'abc', size: 123 })
       end
     end
   end
@@ -236,8 +240,8 @@ RSpec.describe BitsService::Client, unit: true  do
       download_request = stub_request(:get, private_resource_endpoint).
                          to_return(status: 200, body: File.new(file_path))
       upload_request = stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
-                       with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
-                       to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+                       with { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
+                       to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_file_between_keys(key, destination_key)
       expect(download_request).to have_been_requested
@@ -250,8 +254,8 @@ RSpec.describe BitsService::Client, unit: true  do
       stub_request(:get, 'http://somewhere.example.com').
         to_return(status: 200, body: File.new(file_path))
       stub_request(:put, File.join(options[:private_endpoint], resource_type.to_s, destination_key)).
-        with() { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
-        to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+        with { |request| request.body =~ /name="#{resource_type.to_s.singularize}";.*\r\n.*\r\n.*\r\n.*\r\n\r\n#{File.new(file_path).read}/ }.
+        to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_file_between_keys(key, destination_key)
     end
@@ -413,19 +417,19 @@ RSpec.describe BitsService::Client, unit: true  do
   end
 
   describe 'forwards vcap-request-id' do
-    it 'includes the header with a POST request' do
-      request = stub_request(:put, private_resource_endpoint).
-                with() { |request| request.boyd=~ /name="#{resource_type.to_s.singularize}"/ }.
-                with(headers: { 'X-VCAP-REQUEST-ID' => vcap_request_id }).
-                to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+    it 'includes the header with a PUT request' do
+      upload_request = stub_request(:put, private_resource_endpoint).
+                       with { |request| request.boyd =~ /name="#{resource_type.to_s.singularize}"/ }.
+                       with(headers: { 'X-VCAP-REQUEST-ID' => vcap_request_id }).
+                       to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_to_blobstore(file_path, key)
-      expect(request).to have_been_requested
+      expect(upload_request).to have_been_requested
     end
   end
 
   context 'Logging' do
-    # TODO (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
+    # TODO: (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
     it 'logs the request being made' do
       allow_any_instance_of(Steno::Logger).to receive(:info).with('Using bits-service client with root ca certs only (no configured ca_cert_path).')
       allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
@@ -438,7 +442,7 @@ RSpec.describe BitsService::Client, unit: true  do
         vcap_request_id: vcap_request_id,
       })
 
-      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
@@ -452,14 +456,14 @@ RSpec.describe BitsService::Client, unit: true  do
         vcap_request_id: vcap_request_id,
       })
 
-      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
     end
   end
   context 'Logging' do
-    # TODO (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
+    # TODO: (pego): we should re-evaluate if we really want to test for logging statements. It's considered an anti-test pattern.
     it 'logs the request being made' do
       allow_any_instance_of(Steno::Logger).to receive(:info).with('Using bits-service client with root ca certs only (no configured ca_cert_path).')
       allow_any_instance_of(Steno::Logger).to receive(:info).with('Response', anything)
@@ -472,7 +476,7 @@ RSpec.describe BitsService::Client, unit: true  do
         vcap_request_id: vcap_request_id,
       })
 
-      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: "{\"sha1\":\"abc\", \"sha256\":\"def\"}")
+      request = stub_request(:put, private_resource_endpoint).to_return(status: 201, body: '{"sha1":"abc", "sha256":"def"}')
 
       subject.cp_to_blobstore(file_path, key)
       expect(request).to have_been_requested
