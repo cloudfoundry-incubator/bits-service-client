@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module BitsService
   class Blob
     attr_reader :key
@@ -8,7 +9,7 @@ module BitsService
       @private_http_client = private_http_client
       @vcap_request_id = vcap_request_id
       @username = username
-      @password =password
+      @password = password
       @resource_type = resource_type
       @private_endpoint = private_endpoint
     end
@@ -26,7 +27,7 @@ module BitsService
     end
 
     def public_upload_url
-      signed_url(key, verb: 'put')+'&async=true'
+      signed_url(key, verb: 'put') + '&async=true'
     end
 
     def internal_download_url

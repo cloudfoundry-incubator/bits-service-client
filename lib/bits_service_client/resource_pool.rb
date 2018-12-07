@@ -18,7 +18,7 @@ module BitsService
       end
     end
 
-    def signed_matches_url()
+    def signed_matches_url
       req = Net::HTTP::Get.new('/sign/app_stash/matches?verb=post')
       req.basic_auth(@username, @password)
       response = do_request(http_client, req, @vcap_request_id)

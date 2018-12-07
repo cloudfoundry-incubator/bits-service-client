@@ -1,10 +1,11 @@
 # frozen_string_literal: true
+
 require 'spec_helper'
 require 'ostruct'
 require 'securerandom'
 
 RSpec.describe BitsService::Client, unit: true do
-  let(:resource_type) { 'buildpacks'}
+  let(:resource_type) { 'buildpacks' }
   let(:vcap_request_id) { '4711' }
   let(:key) { SecureRandom.uuid }
   let(:https_options) do
@@ -31,13 +32,14 @@ RSpec.describe BitsService::Client, unit: true do
     before do
       # uri = URI.parse("https://private-host/#{resource_type}/#{key}")
       # stub_request(:head, uri).to_return(status: 200)
-      stub_request(:post, "https://private-host/app_stash/matches").with(
-        :body => '<key>', :headers => {
-           'Accept'=>'*/*',
-           'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-           'User-Agent'=>'Ruby',
-           'X-Vcap-Request-Id'=>''}
-           ).to_return(:status => 200, :body => '', :headers => {})
+      stub_request(:post, 'https://private-host/app_stash/matches').with(
+        body: '<key>', headers: {
+           'Accept' => '*/*',
+           'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+           'User-Agent' => 'Ruby',
+           'X-Vcap-Request-Id' => ''
+ }
+           ).to_return(status: 200, body: '', headers: {})
     end
 
     it 'returns true' do

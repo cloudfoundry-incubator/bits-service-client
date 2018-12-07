@@ -1,8 +1,9 @@
 # frozen_string_literal: true
+
 require 'active_support/inflector'
 require 'bits_service_client/logging_http_client'
 require 'tmpdir'
-require "open3"
+require 'open3'
 
 module BitsService
   class Client
@@ -51,14 +52,14 @@ module BitsService
 
       body = { :"#{@resource_type.to_s.singularize}" => UploadIO.new(source_path, 'application/octet-stream') }
 
-      if resources != nil
+      if !resources.nil?
         body[:resources] = resources.to_json
       end
 
       response = @private_http_client.do_request(Net::HTTP::Put::Multipart.new(resource_path(destination_key), body), @vcap_request_id)
       validate_response_code!(201, response)
-      if response.body == nil
-        logger.error("UnexpectedMissingBody: expected body with json payload. Got empty body.")
+      if response.body.nil?
+        logger.error('UnexpectedMissingBody: expected body with json payload. Got empty body.')
 
         fail BlobstoreError.new({
           response_code: response.code,
@@ -67,8 +68,8 @@ module BitsService
         }.to_json)
       end
       shas = JSON.parse(response.body, symbolize_names: true)
-      validate_keys_present!([:sha1, :sha256], shas, response)
-      return shas
+      validate_keys_present!(%i[sha1 sha256], shas, response)
+      shas
     end
 
     def download_from_blobstore(source_key, destination_path, mode: nil)
@@ -142,7 +143,7 @@ module BitsService
     end
 
     def delete_all_in_path(path)
-      raise NotImplementedError unless :buildpack_cache == resource_type
+      raise NotImplementedError unless resource_type == :buildpack_cache
 
       @private_http_client_fast_timeout.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
@@ -157,10 +158,10 @@ module BitsService
       LoggingHttpClient.new(
         Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
           c.read_timeout = request_timeout_in_seconds
-          if bits_service_options.has_key?(:ca_cert_path)
+          if bits_service_options.key?(:ca_cert_path)
             ca_cert_path = bits_service_options[:ca_cert_path]
           else
-            logger.info("Using bits-service client with root ca certs only (no configured ca_cert_path).")
+            logger.info('Using bits-service client with root ca certs only (no configured ca_cert_path).')
             ca_cert_path = nil
           end
           enable_ssl(c, ca_cert_path) if endpoint.scheme == 'https'
