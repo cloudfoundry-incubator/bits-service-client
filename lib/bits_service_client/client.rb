@@ -120,7 +120,7 @@ module BitsService
     def delete_all(_=nil)
       raise NotImplementedError unless resource_type == :buildpack_cache
 
-      @private_http_client_fast_timeout.delete(resource_path(''), @vcap_request_id).tap do |response|
+      @private_http_client.delete(resource_path(''), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
     end
@@ -128,7 +128,7 @@ module BitsService
     def delete_all_in_path(path)
       raise NotImplementedError unless resource_type == :buildpack_cache
 
-      @private_http_client_fast_timeout.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
+      @private_http_client.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
     end

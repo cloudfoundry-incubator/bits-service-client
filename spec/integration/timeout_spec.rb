@@ -65,24 +65,5 @@ describe BitsService::Client, :integration_test do
       expect(start_time - Time.now).to be < 3
     end
 
-    context 'times out fast' do
-      let(:resource_type) { :buildpack_cache }
-
-      it 'when delete_all is called' do
-        start_time = Time.now
-        expect {
-          subject.delete_all
-        }.to raise_error(Net::ReadTimeout)
-        expect(start_time - Time.now).to be < 3
-      end
-
-      it 'when delete_all_in_path is called' do
-        start_time = Time.now
-        expect {
-          subject.delete_all_in_path(key)
-        }.to raise_error(Net::ReadTimeout)
-        expect(start_time - Time.now).to be < 3
-      end
-    end
   end
 end
