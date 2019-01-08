@@ -15,6 +15,8 @@ RSpec.describe BitsService::Client, unit: true do
       public_endpoint: 'https://public-host',
       username: 'admin',
       password: 'admin',
+      signing_key_secret: 's3cr3t',
+      signing_key_id: 'k3yID',
       ca_cert_path: "#{File.dirname(__FILE__)}/ca_cert.pem",
     }
   end
@@ -25,6 +27,8 @@ RSpec.describe BitsService::Client, unit: true do
       public_endpoint: 'http://public-host',
       username: 'admin',
       password: 'admin',
+      signing_key_secret: 's3cr3t',
+      signing_key_id: 'k3yID',
     }
   end
 
@@ -44,12 +48,9 @@ RSpec.describe BitsService::Client, unit: true do
 
     it 'returns true' do
       resource_pool = BitsService::ResourcePool.new(
-        endpoint: https_options[:private_endpoint],
+        bits_service_options: https_options,
         request_timeout_in_seconds: 100,
         vcap_request_id: '',
-        ca_cert_path: https_options[:ca_cert_path],
-        username: 'me',
-        password: 'mypw',
       )
       expect(resource_pool.matches('<key>')).to be_truthy
     end

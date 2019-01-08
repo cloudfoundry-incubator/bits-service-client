@@ -15,6 +15,8 @@ module BitsService
       @password = validated(bits_service_options, :password)
       @private_endpoint = validated_http_url(bits_service_options, :private_endpoint)
       @public_endpoint = validated_http_url(bits_service_options, :public_endpoint)
+      @signing_key_secret = validated(bits_service_options, :signing_key_secret)
+      @signing_key_id = validated(bits_service_options, :signing_key_id)
 
       raise ResourceTypeNotPresent.new('Must specify resource type') unless resource_type
       @resource_type = resource_type
@@ -107,9 +109,10 @@ module BitsService
         private_http_client: @private_http_client,
         private_endpoint: @private_endpoint,
         vcap_request_id: @vcap_request_id,
-        username: @username,
-        password: @password,
-        resource_type: @resource_type
+        resource_type: @resource_type,
+        public_endpoint: @public_endpoint,
+        signing_key_secret: @signing_key_secret,
+        signing_key_id: @signing_key_id,
       )
     end
 

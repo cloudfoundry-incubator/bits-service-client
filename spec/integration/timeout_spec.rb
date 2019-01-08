@@ -20,6 +20,8 @@ describe BitsService::Client, :integration_test do
       public_endpoint: "http://#{fake_endpoint}:#{fake_endpoint_port}",
       username: 'admin',
       password: 'admin',
+      signing_key_secret: 's3cr3t',
+      signing_key_id: 'k3yID',
       }
   end
 

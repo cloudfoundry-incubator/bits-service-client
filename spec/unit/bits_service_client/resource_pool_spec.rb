@@ -4,20 +4,29 @@ require 'spec_helper'
 require 'securerandom'
 
 module BitsService
-  RSpec.describe ResourcePool do
+  RSpec.describe ResourcePool, unit: true do
     let(:endpoint) { 'http://bits-service.service.cf.internal/' }
     let(:request_timeout_in_seconds) { 42 }
     let(:vcap_request_id) { '4711' }
 
     let(:guid) { SecureRandom.uuid }
 
+    let(:options) do
+      {
+        enabled: true,
+        private_endpoint: endpoint,
+        public_endpoint: 'http://public-host',
+        signing_key_secret: 's3cr3t',
+        signing_key_id: 'k3yID',
+        ca_cert_path: nil
+      }
+    end
+
     subject { ResourcePool.new(
-      endpoint: endpoint,
+      bits_service_options: options,
       request_timeout_in_seconds: request_timeout_in_seconds,
       vcap_request_id: vcap_request_id,
-      username: 'me',
-      password: 'mypw',
-    )
+      )
     }
 
     describe 'forwards vcap-request-id' do
@@ -99,13 +108,9 @@ module BitsService
 
       describe '#signed_matches_url' do
         it 'makes the correct request to the bits endpoint' do
-          stub_request(:get, File.join(endpoint, 'sign/app_stash/matches?verb=post')).
-            with(basic_auth: ['me', 'mypw']).
-            to_return(status: 200, body: 'example.com/the/signed/url')
-
+          signed_url_compare=/http:\/\/public-host\/app_stash\/matches\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}/
           signed_url = subject.signed_matches_url
-
-          expect(signed_url).to eq('example.com/the/signed/url')
+          expect(signed_url).to match(/#{signed_url_compare}/)
         end
       end
 

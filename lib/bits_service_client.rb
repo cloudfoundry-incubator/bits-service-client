@@ -4,6 +4,7 @@ require 'json'
 require 'net/http/post/multipart'
 require 'openssl'
 
+require 'util/signature_util'
 require 'bits_service_client/version'
 require 'bits_service_client/blob'
 require 'bits_service_client/errors'

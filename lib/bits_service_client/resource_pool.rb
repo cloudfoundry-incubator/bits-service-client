@@ -1,15 +1,20 @@
 # frozen_string_literal: true
+require 'util/signature_util'
 
 module BitsService
   class ResourcePool
-    def initialize(endpoint:, request_timeout_in_seconds:, vcap_request_id: '', ca_cert_path: nil, username:, password:)
-      @endpoint = URI.parse(endpoint)
+
+    include BitsService::SignatureUtil
+
+    def initialize(bits_service_options:, request_timeout_in_seconds:, vcap_request_id: '')
+      @endpoint = URI.parse(bits_service_options[:private_endpoint])
+      @public_endpoint = bits_service_options[:public_endpoint]
       @request_timeout_in_seconds = request_timeout_in_seconds
+      @signed_key_secret = bits_service_options[:signing_key_secret]
+      @signed_key_id = bits_service_options[:signing_key_id]
       @vcap_request_id = vcap_request_id
       @logger = Steno.logger('cc.bits_service_client')
-      @ca_cert_path = ca_cert_path
-      @username = username
-      @password = password
+      @ca_cert_path = bits_service_options[:ca_cert_path]
     end
 
     def matches(resources_json)
@@ -19,11 +24,10 @@ module BitsService
     end
 
     def signed_matches_url
-      req = Net::HTTP::Get.new('/sign/app_stash/matches?verb=post')
-      req.basic_auth(@username, @password)
-      response = do_request(http_client, req, @vcap_request_id)
-      validate_response_code!(200, response)
-      response.body
+      # "verb=post"
+      signed_url = "#{@public_endpoint}#{self.sign_signature("/app_stash/matches", @signed_key_secret, @signed_key_id)}"
+      @logger.debug("Created signed URL: #{signed_url}")
+      return signed_url
     end
 
     def bundles(resources_json, entries_path)
@@ -113,5 +117,6 @@ module BitsService
       http_client.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http_client.cert_store = cert_store
     end
+
   end
 end

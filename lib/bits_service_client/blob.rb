@@ -1,17 +1,22 @@
 # frozen_string_literal: true
+require 'util/signature_util'
 
 module BitsService
   class Blob
+
+    include BitsService::SignatureUtil
+
     attr_reader :key
 
-    def initialize(key:, private_endpoint:, private_http_client:, vcap_request_id:, username:, password:, resource_type:)
+    def initialize(key:, private_endpoint:, private_http_client:, vcap_request_id:, resource_type:, public_endpoint:, signing_key_secret:, signing_key_id:)
       @key = key
       @private_http_client = private_http_client
       @vcap_request_id = vcap_request_id
-      @username = username
-      @password = password
       @resource_type = resource_type
       @private_endpoint = private_endpoint
+      @public_endpoint = public_endpoint
+      @signing_key_secret = signing_key_secret
+      @signing_key_id = signing_key_id
     end
 
     def attributes(*_)
@@ -38,19 +43,14 @@ module BitsService
 
     def signed_url(key, verb: nil)
       query = if verb.nil?
-                ''
-              else
-                "?verb=#{verb}"
-              end
-
-      response = @private_http_client.get("/sign#{resource_path(key)}#{query}", @vcap_request_id, { username: @username, password: @password })
-      validate_response_code!([200, 302], response)
-
-      response.tap do |result|
-        result.body = result['location'] if result.code.to_i == 302
+        ''
+      else
+        "&verb=#{verb}"
       end
 
-      response.body
+      signed_url = "#{@public_endpoint}#{self.sign_signature(resource_path(key), @signing_key_secret, @signing_key_id)}#{query}"
+      logger.debug( "Created signed URL: #{signed_url}")
+      return signed_url
     end
 
     def generate_private_url(key)
@@ -61,22 +61,6 @@ module BitsService
       end
 
       File.join(@private_endpoint.to_s, path)
-    end
-
-    # TODO: Refactor the following code to avoid duplicate methods with BitsService::Client
-
-    def validate_response_code!(expected_codes, response)
-      return if Array(expected_codes).include?(response.code.to_i)
-
-      error = {
-        response_code: response.code,
-        response_body: response.body,
-        response: response
-      }.to_json
-
-      logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{response.code}")
-
-      fail BlobstoreError.new(error)
     end
 
     def resource_path(key)

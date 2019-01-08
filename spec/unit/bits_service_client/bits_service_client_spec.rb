@@ -26,6 +26,8 @@ RSpec.describe BitsService::Client, unit: true do
       public_endpoint: 'http://public-host',
       username: 'admin',
       password: 'admin',
+      signing_key_secret: 's3cr3t',
+      signing_key_id: 'k3yID',
     }
   end
 
@@ -294,12 +296,6 @@ RSpec.describe BitsService::Client, unit: true do
   describe '#blob' do
     before do
       stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 200)
-      stub_request(:get, "http://private-host/sign/#{resource_type}/#{key}").
-        with(basic_auth: ['admin', 'admin']).
-        to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?signature=x")
-      stub_request(:get, "http://private-host/sign/#{resource_type}/#{key}?verb=put").
-        with(basic_auth: ['admin', 'admin']).
-        to_return(status: 200, body: "http://public-host/#{resource_type}/#{key}?verb=put&signature=y")
     end
 
     it 'returns a blob object with the given guid' do
@@ -307,11 +303,13 @@ RSpec.describe BitsService::Client, unit: true do
     end
 
     it 'returns a blob object with public download_url' do
-      expect(subject.blob(key).public_download_url).to eq("http://public-host/#{resource_type}/#{key}?signature=x")
+      signed_url_compare=/http:\/\/public-host\/#{resource_type}\/#{key}\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}/
+      expect(subject.blob(key).public_download_url).to match(/#{signed_url_compare}/)
     end
 
     it 'returns a blob object with public upload_url' do
-      expect(subject.blob(key).public_upload_url).to eq("http://public-host/#{resource_type}/#{key}?verb=put&signature=y&async=true")
+      signed_url_compare=/http:\/\/public-host\/#{resource_type}\/#{key}\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}&verb=put&async=true/
+      expect(subject.blob(key).public_upload_url).to match(/#{signed_url_compare}/)
     end
 
     it 'returns a blob object with internal download_url' do
@@ -322,13 +320,6 @@ RSpec.describe BitsService::Client, unit: true do
       it 'uses redirected url as the internal_download_url' do
         stub_request(:head, "http://private-host/#{resource_type}/#{key}").to_return(status: 302, headers: { location: 'some-redirect-1' })
         expect(subject.blob(key).internal_download_url).to eq('some-redirect-1')
-      end
-
-      it 'used the redirected url as public_download_url' do
-        stub_request(:get, "http://private-host/sign/#{resource_type}/#{key}").
-          with(basic_auth: ['admin', 'admin']).
-          to_return(status: 302, headers: { location: 'some-redirect-2' })
-        expect(subject.blob(key).public_download_url).to eq('some-redirect-2')
       end
     end
   end
