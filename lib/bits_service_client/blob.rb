@@ -45,7 +45,13 @@ module BitsService
     end
 
     def internal_download_url
-      generate_private_url(key)
+      path = resource_path(key)
+
+      @private_http_client.head(path, @vcap_request_id).tap do |response|
+        return response['location'] if response.code.to_i == 302
+      end
+
+      File.join(@private_endpoint.to_s, path)
     end
 
     private
@@ -62,16 +68,6 @@ module BitsService
       logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{response.code}")
 
       fail BlobstoreError.new(error)
-    end
-
-    def generate_private_url(key)
-      path = resource_path(key)
-
-      @private_http_client.head(path, @vcap_request_id).tap do |response|
-        return response['location'] if response.code.to_i == 302
-      end
-
-      File.join(@private_endpoint.to_s, path)
     end
 
     def resource_path(key)
