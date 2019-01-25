@@ -303,13 +303,21 @@ RSpec.describe BitsService::Client, unit: true do
     end
 
     it 'returns a blob object with public download_url' do
-      signed_url_compare=/http:\/\/public-host\/#{resource_type}\/#{key}\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}/
-      expect(subject.blob(key).public_download_url).to match(/#{signed_url_compare}/)
+      stub_request(:head, %r{http://private-host/#{resource_type}/#{key}\?AccessKeyId=k3yID&expires=[0-9]*&signature=[a-z0-9]*}).
+        to_return(:status => 200, :body => "", :headers => {})
+
+      expect(subject.blob(key).public_download_url).to match(/http:\/\/public-host\/#{resource_type}\/#{key}\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}/)
+    end
+
+    it 'returns a blob object with public download_url with redirect' do
+      stub_request(:head, %r{http://private-host/#{resource_type}/#{key}\?AccessKeyId=k3yID&expires=[0-9]*&signature=[a-z0-9]*}).
+        to_return(:status => 302, :body => "", :headers => {'Location' => "http://example.com/signature=my-signature"})
+
+      expect(subject.blob(key).public_download_url).to match("http://example.com/signature=my-signature")
     end
 
     it 'returns a blob object with public upload_url' do
-      signed_url_compare=/http:\/\/public-host\/#{resource_type}\/#{key}\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}&verb=put&async=true/
-      expect(subject.blob(key).public_upload_url).to match(/#{signed_url_compare}/)
+      expect(subject.blob(key).public_upload_url).to match(/http:\/\/public-host\/#{resource_type}\/#{key}\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}&async=true&verb=put/)
     end
 
     it 'returns a blob object with internal download_url' do

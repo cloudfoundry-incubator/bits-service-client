@@ -28,11 +28,20 @@ module BitsService
     end
 
     def public_download_url
-      signed_url(key)
+      signed_url = "#{@public_endpoint}#{self.sign_signature(resource_path(key), @signing_key_secret, @signing_key_id)}"
+
+      response = @private_http_client.head(signed_url, @vcap_request_id)
+      validate_response_code!([200, 302], response)
+
+      if response.code.to_i == 302
+        response['location']
+      else
+        signed_url
+      end
     end
 
     def public_upload_url
-      signed_url(key, verb: 'put') + '&async=true'
+      "#{@public_endpoint}#{self.sign_signature(resource_path(key), @signing_key_secret, @signing_key_id)}&async=true&verb=put"
     end
 
     def internal_download_url
@@ -41,16 +50,18 @@ module BitsService
 
     private
 
-    def signed_url(key, verb: nil)
-      query = if verb.nil?
-        ''
-      else
-        "&verb=#{verb}"
-      end
+    def validate_response_code!(expected_codes, response)
+      return if Array(expected_codes).include?(response.code.to_i)
 
-      signed_url = "#{@public_endpoint}#{self.sign_signature(resource_path(key), @signing_key_secret, @signing_key_id)}#{query}"
-      logger.debug( "Created signed URL: #{signed_url}")
-      return signed_url
+      error = {
+        response_code: response.code,
+        response_body: response.body,
+        response: response
+      }.to_json
+
+      logger.error("UnexpectedResponseCode: expected '#{expected_codes}' got #{response.code}")
+
+      fail BlobstoreError.new(error)
     end
 
     def generate_private_url(key)
