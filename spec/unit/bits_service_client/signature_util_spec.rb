@@ -29,7 +29,7 @@ module BitsService
                 expect(encoded_signed_url).not_to be_empty
                 expect(params_hash['signature']).not_to include "-"
                 expect(params_hash['signature'].length).to equal 64
-                expect(params_hash['expires'].to_i - Time.now.to_i).to be 3600
+                expect(params_hash['expires'].to_i - Time.now.to_i).to be <= 3600
                 expect(params_hash['AccessKeyId']).to eq key_id
             end
         end

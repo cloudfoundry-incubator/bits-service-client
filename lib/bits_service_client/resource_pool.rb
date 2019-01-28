@@ -7,11 +7,11 @@ module BitsService
     include BitsService::SignatureUtil
 
     def initialize(bits_service_options:, request_timeout_in_seconds:, vcap_request_id: '')
-      @endpoint = URI.parse(bits_service_options[:private_endpoint])
-      @public_endpoint = bits_service_options[:public_endpoint]
+      @private_endpoint = URI.parse(bits_service_options[:private_endpoint])
+      @public_endpoint = URI.parse(bits_service_options[:public_endpoint])
       @request_timeout_in_seconds = request_timeout_in_seconds
-      @signed_key_secret = bits_service_options[:signing_key_secret]
-      @signed_key_id = bits_service_options[:signing_key_id]
+      @signed_key_secret = validated(bits_service_options, :signing_key_secret )
+      @signed_key_id = validated(bits_service_options, :signing_key_id)
       @vcap_request_id = vcap_request_id
       @logger = Steno.logger('cc.bits_service_client')
       @ca_cert_path = bits_service_options[:ca_cert_path]
@@ -24,10 +24,7 @@ module BitsService
     end
 
     def signed_matches_url
-      # "verb=post"
-      signed_url = "#{@public_endpoint}#{self.sign_signature("/app_stash/matches", @signed_key_secret, @signed_key_id)}"
-      @logger.debug("Created signed URL: #{signed_url}")
-      return signed_url
+      "#{@public_endpoint}#{self.sign_signature('/app_stash/matches', @signed_key_secret, @signed_key_id)}"
     end
 
     def bundles(resources_json, entries_path)
@@ -49,7 +46,7 @@ module BitsService
 
     private
 
-    attr_reader :endpoint
+    attr_reader :private_endpoint
 
     def validate_response_code!(expected, response)
       return if expected.to_i == response.code.to_i
@@ -102,9 +99,9 @@ module BitsService
     end
 
     def http_client
-      @http_client ||= Net::HTTP.new(endpoint.host, endpoint.port).tap do |c|
+      @http_client ||= Net::HTTP.new(private_endpoint.host, private_endpoint.port).tap do |c|
         c.read_timeout = @request_timeout_in_seconds
-        enable_ssl(c, @ca_cert_path) if endpoint.scheme == 'https'
+        enable_ssl(c, @ca_cert_path) if private_endpoint.scheme == 'https'
       end
     end
 
@@ -118,5 +115,9 @@ module BitsService
       http_client.cert_store = cert_store
     end
 
+    def validated(bits_service_options, attribute)
+      raise ConfigurationError.new("Please provide #{attribute}") unless bits_service_options[attribute]
+      bits_service_options[attribute]
+    end
   end
 end
