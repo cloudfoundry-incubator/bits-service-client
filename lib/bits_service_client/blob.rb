@@ -1,9 +1,9 @@
 # frozen_string_literal: true
+
 require 'util/signature_util'
 
 module BitsService
   class Blob
-
     include BitsService::SignatureUtil
 
     attr_reader :key

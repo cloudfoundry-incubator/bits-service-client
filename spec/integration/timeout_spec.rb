@@ -66,6 +66,5 @@ describe BitsService::Client, :integration_test do
       }.to raise_error(Net::ReadTimeout)
       expect(start_time - Time.now).to be < 3
     end
-
   end
 end

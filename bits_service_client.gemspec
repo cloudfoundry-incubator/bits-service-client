@@ -7,7 +7,7 @@ require 'bits_service_client/version'
 Gem::Specification.new do |spec|
   spec.name          = 'bits_service_client'
   spec.version       = BitsServiceClient::VERSION
-  spec.authors       = ['Rizwan Reza', 'Steffen Uhlig', 'Peter Goetz', 'Norman Sutorius','Tobias Zipfel']
+  spec.authors       = ['Rizwan Reza', 'Steffen Uhlig', 'Peter Goetz', 'Norman Sutorius', 'Tobias Zipfel']
   spec.email         = ['rizwanreza@gmail.com', 'steffen.uhlig@de.ibm.com', 'peter.gtz@gmail.com', 'norman.sutorius@de.ibm.com', 'tobias.zipfel@gmail.com']
 
   spec.summary       = 'Bits Services client for Cloud Foundry'

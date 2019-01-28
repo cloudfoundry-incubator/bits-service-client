@@ -1,16 +1,16 @@
 # frozen_string_literal: true
+
 require 'util/signature_util'
 
 module BitsService
   class ResourcePool
-
     include BitsService::SignatureUtil
 
     def initialize(bits_service_options:, request_timeout_in_seconds:, vcap_request_id: '')
       @private_endpoint = URI.parse(bits_service_options[:private_endpoint])
       @public_endpoint = URI.parse(bits_service_options[:public_endpoint])
       @request_timeout_in_seconds = request_timeout_in_seconds
-      @signed_key_secret = validated(bits_service_options, :signing_key_secret )
+      @signed_key_secret = validated(bits_service_options, :signing_key_secret)
       @signed_key_id = validated(bits_service_options, :signing_key_id)
       @vcap_request_id = vcap_request_id
       @logger = Steno.logger('cc.bits_service_client')

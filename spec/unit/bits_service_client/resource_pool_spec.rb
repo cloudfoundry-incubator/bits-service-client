@@ -108,7 +108,7 @@ module BitsService
 
       describe '#signed_matches_url' do
         it 'makes the correct request to the bits endpoint' do
-          signed_url_compare=/http:\/\/public-host\/app_stash\/matches\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}/
+          signed_url_compare = %r{http://public-host/app_stash/matches\?signature=[a-z0-9]*&expires=[0-9]*&AccessKeyId=#{options[:signing_key_id]}}
           signed_url = subject.signed_matches_url
           expect(signed_url).to match(/#{signed_url_compare}/)
         end
