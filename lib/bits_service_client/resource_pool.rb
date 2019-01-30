@@ -24,7 +24,7 @@ module BitsService
     end
 
     def signed_matches_url
-      "#{@public_endpoint}#{self.sign_signature('/app_stash/matches', @signed_key_secret, @signed_key_id)}"
+      "#{@public_endpoint}#{self.sign_signature('POST','/app_stash/matches', @signed_key_secret, @signed_key_id)}"
     end
 
     def bundles(resources_json, entries_path)

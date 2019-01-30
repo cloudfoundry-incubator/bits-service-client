@@ -28,7 +28,7 @@ module BitsService
     end
 
     def public_download_url
-      signed_url = "#{@public_endpoint}#{self.sign_signature(resource_path(key), @signing_key_secret, @signing_key_id)}"
+      signed_url = "#{@public_endpoint}#{self.sign_signature('GET', resource_path(key), @signing_key_secret, @signing_key_id)}"
 
       response = @private_http_client.head(signed_url, @vcap_request_id)
       validate_response_code!([200, 302], response)
@@ -41,7 +41,7 @@ module BitsService
     end
 
     def public_upload_url
-      "#{@public_endpoint}#{self.sign_signature(resource_path(key), @signing_key_secret, @signing_key_id)}&async=true&verb=put"
+      "#{@public_endpoint}#{self.sign_signature('PUT',resource_path(key), @signing_key_secret, @signing_key_id)}&async=true&verb=put"
     end
 
     def internal_download_url

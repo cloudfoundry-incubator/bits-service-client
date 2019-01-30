@@ -15,7 +15,8 @@ module BitsService
         resource_path = '/packages/stuff'
         secret = 's3cr3t'
         key_id = 'key1'
-        encoded_signed_url = @util.sign_signature(resource_path, secret, key_id)
+        method = 'get'
+        encoded_signed_url = @util.sign_signature(method ,resource_path, secret, key_id)
         url_query_params = encoded_signed_url.split('?')[1]
         params = url_query_params.split('&')
 
