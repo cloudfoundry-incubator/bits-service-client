@@ -4,9 +4,12 @@ require 'active_support/inflector'
 require 'bits_service_client/logging_http_client'
 require 'tmpdir'
 require 'open3'
+require 'util/signature_util'
 
 module BitsService
   class Client
+    include BitsService::SignatureUtil
+
     ResourceTypeNotPresent = Class.new(StandardError)
     ConfigurationError = Class.new(StandardError)
 
