@@ -116,7 +116,7 @@ module BitsService
       )
     end
 
-    def get_buildpack_metadata(key)
+    def get_buildpack_metadata(source_key)
       response = @private_http_client.get(File.join(resource_path(source_key), 'metadata'), @vcap_request_id)
       validate_response_code!(200, response)
       JSON.parse(response.body, symbolize_names: true)
@@ -140,6 +140,10 @@ module BitsService
       @private_http_client.delete(resource_path(path.to_s), @vcap_request_id).tap do |response|
         validate_response_code!(204, response)
       end
+    end
+
+    def public_upload_url(resource_type, http_method)
+      "#{@public_endpoint}#{self.sign_signature(http_method.upcase, "/#{resource_type}", @signing_key_secret, @signing_key_id)}&async=true&verb=#{http_method.downcase}"
     end
 
     private
