@@ -116,6 +116,12 @@ module BitsService
       )
     end
 
+    def get_buildpack_metadata(key)
+      response = @private_http_client.get(File.join(resource_path(source_key), 'metadata'), @vcap_request_id)
+      validate_response_code!(200, response)
+      JSON.parse(response.body, symbolize_names: true)
+    end
+
     def delete_blob(blob)
       delete(blob.guid)
     end
